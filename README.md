@@ -4,6 +4,7 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9+-purple.svg)](https://kotlinlang.org/)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture%20%2B%20MVVM-blue.svg)]()
 [![API](https://img.shields.io/badge/API%20Level-24%2B-orange.svg)](https://developer.android.com/about/versions/nougat/android-7.0.html)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
 Социальное приложение для путешественников, позволяющее отмечать посещенные места на карте, делиться маршрутами и находить интересные локации от других пользователей.
 
