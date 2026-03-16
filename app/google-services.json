@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "324079249226",
+    "project_id": "placesli",
+    "storage_bucket": "placesli.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:324079249226:android:308957218f85516f9503b3",
+        "android_client_info": {
+          "package_name": "com.example.placeslikee"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-crgUzeC7kAx50yR_IdHs1-Sb5yjfOGE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
