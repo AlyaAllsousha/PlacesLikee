@@ -11,11 +11,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
 import com.example.placeslikee.ui.theme.PlacesLikeeTheme
 import com.yandex.mapkit.MapKitFactory
 import com.example.placeslikee.BuildConfig
+import com.example.placeslikee.presentation.navigation.BottomNavigationBar
+import com.example.placeslikee.presentation.navigation.NavHostContainer
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.MainScope
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,11 +27,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PlacesLikeeTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MainScreen()
-                }
+                val navController = rememberNavController()
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    bottomBar = { BottomNavigationBar(navController = navController) },
+                    content = { padding -> NavHostContainer(navController = navController, padding = padding) }
+                )
             }
         }
     }
 }
+
 

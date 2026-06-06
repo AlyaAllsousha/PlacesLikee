@@ -142,11 +142,12 @@ fun MapScreen(
 
                             userLocationLayer = layer
                         }
-                        Log.d("my log", "MapScreen: works correctly")
+                       // Log.d("my log", "MapScreen: works correctly")
 
                     }
                     catch (e: SecurityException){
-                        Log.e("my log", "MapScreen: ${e.message}")}
+                        //Log.e("my log", "MapScreen: ${e.message}")
+                    }
                 }
                     userLocationLayer?.isVisible = isLocationGranted
 
@@ -156,7 +157,7 @@ fun MapScreen(
         )
     }
     LaunchedEffect(state.points) {
-        val mapObjects = mapView.map.mapObjects
+        val mapObjects = mapView.mapWindow.map.mapObjects
         mapObjects.clear()
         state.points.forEach { point ->
             val placemark = mapObjects.addPlacemark(Point(point.latitude, point.longtitude))
