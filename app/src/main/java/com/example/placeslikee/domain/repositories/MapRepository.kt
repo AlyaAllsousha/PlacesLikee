@@ -1,9 +1,12 @@
 package com.example.placeslikee.domain.repositories
 
-import com.example.placeslikee.domain.models.MapPoint
+import com.example.placeslikee.domain.models.UIMarker
 import kotlinx.coroutines.flow.Flow
 
 interface MapRepository {
-    fun getPoints(): Flow<List<MapPoint>>
-    suspend fun addPoint(lat: Double, lon: Double, title: String)
+    fun getMarkers(): Flow<List<UIMarker>>
+    suspend fun addMarkers(newMarker: UIMarker)
+    suspend fun updateMarker(marker: UIMarker)
+    suspend fun deleteMark(marker: UIMarker)
+    suspend fun refreshMarkers()
 }

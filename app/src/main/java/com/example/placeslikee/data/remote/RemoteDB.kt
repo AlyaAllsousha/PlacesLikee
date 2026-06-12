@@ -1,0 +1,29 @@
+package com.example.placeslikee.data.remote
+
+import com.example.placeslikee.data.local.entities.marks.MarkerEntity
+import com.example.placeslikee.data.remote.dto.RemoteMarker
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+
+class RemoteDB @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
+    private val collection = firestore.collection("places_likee")
+
+    suspend fun getAllMarkers(): List<RemoteMarker> {
+        return try {
+            val snapshot = collection.get().await()
+            snapshot.documents.mapNotNull { doc ->
+                doc.toObject(RemoteMarker::class.java)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun saveMarker(mark: RemoteMarker) {
+        collection.document(mark.id).set(mark).await()
+    }
+}

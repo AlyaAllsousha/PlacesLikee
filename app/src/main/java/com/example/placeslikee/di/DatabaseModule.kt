@@ -5,7 +5,6 @@ import android.net.LocalSocket
 import androidx.room.Room
 import com.example.placeslikee.data.local.LocalDB
 import com.example.placeslikee.data.local.dao.MarkerDao
-import com.example.placeslikee.data.local.dao.PendingDao
 import com.example.placeslikee.data.local.dao.UsersDao
 import dagger.Module
 import dagger.Provides
@@ -38,8 +37,5 @@ object DatabaseModule {
     fun provideUserDao(database: LocalDB):UsersDao{
         return database.usersDao()
     }
-    @Provides
-    fun providePendingDao(database: LocalDB):PendingDao{
-        return database.pendingDao()
-    }
+
 }

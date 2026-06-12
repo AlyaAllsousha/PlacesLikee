@@ -1,6 +1,7 @@
 package com.example.placeslikee.domain.models
 
-data class UIMark(
+data class UIMarker(
+    val id: String,
     val lat: Double,
     val longitude: Double,
     val name:String,

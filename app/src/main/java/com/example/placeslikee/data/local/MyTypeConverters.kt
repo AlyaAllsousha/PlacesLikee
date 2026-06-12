@@ -2,7 +2,6 @@ package com.example.placeslikee.data.local
 
 import androidx.room.TypeConverter
 import com.example.placeslikee.data.local.entities.marks.SyncState
-import com.example.placeslikee.data.local.entities.pending.PendingAction
 
 class MyTypeConverters {
     @TypeConverter
@@ -15,15 +14,7 @@ class MyTypeConverters {
             SyncState.valueOf(value)
         }
         catch (e: Exception){
-            SyncState.SYNCED
+            SyncState.PENDING_UPDATE
         }
-    }
-    @TypeConverter
-    fun fromPending(value: PendingAction): String{
-        return value.name
-    }
-    @TypeConverter
-    fun toPending(value: String):PendingAction{
-        return PendingAction.valueOf(value)
     }
 }
