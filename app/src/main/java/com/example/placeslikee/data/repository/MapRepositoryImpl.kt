@@ -44,8 +44,6 @@ class MapRepositoryImpl @Inject constructor(
     override suspend fun deleteMark(marker: UIMarker) {
         localDb.markersDao().markAsDeleted(marker.id)
         syncManager.sync()
-        localDb.markersDao().deleteMark(marker.toMarkerEntity())
-
     }
 
     override suspend fun refreshMarkers() {

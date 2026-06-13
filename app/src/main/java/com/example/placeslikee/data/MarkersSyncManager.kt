@@ -40,7 +40,8 @@ class MarkersSyncManager @Inject constructor(
                     }
 
                     SyncState.PENDING_DELETE -> {
-
+                        remoteDB.deleteMarker(marker.toRemoteMarker())
+                        localDB.markersDao().deleteMark(marker)
                     }
 
                     SyncState.PENDING_UPDATE -> {}
