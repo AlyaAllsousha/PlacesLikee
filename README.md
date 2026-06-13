@@ -52,8 +52,8 @@
 | **Архитектура** | Clean Architecture + MVVM |
 | **DI** | Hilt |
 | **Карты** | Yandex MapKit |
-| **Сеть** | Retrofit 2, OkHttp, Kotlin Coroutines, Flow |
-| **Локальное хранилище** | Room, DataStore |
+| **Сеть** |Kotlin Coroutines, Flow |
+| **Локальное хранилище** | Room, DataStore, Firebase Firestore |
 | **Аутентификация** | Firebase Auth |
 | **Уведомления** | Firebase Cloud Messaging, WorkManager |
 | **Загрузка изображений** | Coil |
@@ -69,12 +69,7 @@
 |  Геолокация | Определение текущего местоположения |
 
 
-##  API Документация
 
-Для хранения меток используется внешний сервис:
-
-- **Swagger:** https://maps.rtuitlab.dev/docs
-- **Base URL:** `https://maps.rtuitlab.dev/api`
 
 
 
