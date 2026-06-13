@@ -2,13 +2,13 @@ package com.example.placeslikee.data.mapper
 
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerWithAuthor
+import com.example.placeslikee.data.local.entities.marks.SyncState
 import com.example.placeslikee.data.remote.dto.RemoteMarker
 import com.example.placeslikee.domain.models.UIMarker
 import com.google.firebase.firestore.GeoPoint
-import kotlin.String
 
 fun MarkerEntity.toRemoteMarker(): RemoteMarker = RemoteMarker(
-    id = remoteId,
+    id = id,
     authorId = authorId,
     coordinates = GeoPoint(lat, longitude),
     description = description,
@@ -18,23 +18,36 @@ fun MarkerEntity.toRemoteMarker(): RemoteMarker = RemoteMarker(
 )
 
 fun RemoteMarker.toMarkerEntity(): MarkerEntity = MarkerEntity(
-    remoteId = id,
+    id = id,
     lat = coordinates.latitude,
     longitude = coordinates.longitude,
     name = locationName,
     authorId = authorId,
     description = description,
     likesAmount = likesAmount,
+    synced = SyncState.SYNCED,
     image = image,
     )
 
 fun MarkerWithAuthor.toUIMarker(): UIMarker = UIMarker(
-    id = mark.remoteId,
+    id = mark.id,
     lat = mark.lat,
     longitude = mark.longitude,
     name = mark.name,
-    authorName = author.name,
+    authorId = mark.authorId,
+    authorName = author?.name ?: "Unknown",
     description = mark.description,
     likesAmount = mark.likesAmount,
     image = mark.image
+)
+fun UIMarker.toMarkerEntity(): MarkerEntity = MarkerEntity(
+    id = id,
+    lat = lat,
+    longitude = longitude,
+    name = name,
+    authorId = authorId,
+    description = description,
+    likesAmount = likesAmount,
+    likedByUser = likedByUser,
+    image = image
 )

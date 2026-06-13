@@ -1,11 +1,17 @@
 package com.example.placeslikee.presentation.map
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.PointF
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,13 +23,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.placeslikee.R
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.layers.ObjectEvent
+import com.yandex.mapkit.map.CameraListener
 import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.CameraUpdateReason
+import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.InputListener
 import com.yandex.mapkit.map.Map
 import com.yandex.mapkit.map.MapObjectTapListener
@@ -40,32 +50,50 @@ fun MapScreen(
     val state by viewModel.mapState.collectAsState()
     val context = LocalContext.current
     val mapView = MapViewHelper()
-    var followUser by remember { mutableStateOf(true) }
+
+    val isFirstTimeLoading by viewModel.isFirstTimeLoading.collectAsState()
+
     var userLocationLayer by remember { mutableStateOf<UserLocationLayer?>(null) }
 
     val inputListener = remember {
         object : InputListener {
             override fun onMapTap(p0: Map, p1: Point) {}
-
             override fun onMapLongTap(p0: Map, p1: Point) {
                 viewModel.onMapClick(MapEvent.OnMapLongClick(p1.latitude, p1.longitude))
             }
         }
     }
+
+    val cameraListener = remember {
+        object : CameraListener {
+            override fun onCameraPositionChanged(
+                p0: Map,
+                p1: CameraPosition,
+                p2: CameraUpdateReason,
+                p3: Boolean
+            ) {
+                viewModel.updateCameraPosition(p1)
+                if(p3 && isFirstTimeLoading)
+                    viewModel.setIsFirstTimeLoading(false)
+            }
+
+        }
+    }
+
     //Permission for location checking
     var isLocationGranted by remember {
         mutableStateOf(
-            androidx.core.content.ContextCompat.checkSelfPermission(
+            ContextCompat.checkSelfPermission(
                 context,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
         )
     }
-    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        isLocationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        isLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     }
 
 
@@ -80,24 +108,22 @@ fun MapScreen(
     }
 
     val userLocationObjectListener = remember {
-        object : UserLocationObjectListener{
+        object : UserLocationObjectListener {
             override fun onObjectAdded(p0: UserLocationView) {}
 
             override fun onObjectRemoved(p0: UserLocationView) {}
 
-            override fun onObjectUpdated(p0: UserLocationView, p1: ObjectEvent){
-                if(followUser){
+            override fun onObjectUpdated(p0: UserLocationView, p1: ObjectEvent) {
+                if (isFirstTimeLoading && viewModel.getLatestCameraPosition() == null) {
                     val userPoint = p0.arrow.geometry
                     if (userPoint.latitude == 0.0 && userPoint.longitude == 0.0)
                         return
-                    mapView.map.move(
+                    mapView.mapWindow.map.move(
                         CameraPosition(userPoint, 17.0f, 0.0f, 0.0f),
                         Animation(Animation.Type.SMOOTH, 1f),
                         null
                     )
-
-                        followUser = false
-
+                    viewModel.setIsFirstTimeLoading(false)
                 }
             }
 
@@ -107,29 +133,37 @@ fun MapScreen(
         if (!isLocationGranted) {
             launcher.launch(
                 arrayOf(
-                    android.Manifest.permission.ACCESS_FINE_LOCATION,
-                    android.Manifest.permission.ACCESS_COARSE_LOCATION
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
                 )
             )
         }
     }
     Box(
-        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp))
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(16.dp))
     ) {
         AndroidView(
             factory = {
                 mapView.apply {
-                    mapWindow.map.addInputListener(inputListener)
+                    val map = mapWindow.map
+                    map.addInputListener(inputListener)
+                    map.addCameraListener(cameraListener)
+                    viewModel.getLatestCameraPosition()?.let { savedPos ->
+                        map.move(savedPos)
+
+                    }
                 }
             },
             update = { view ->
-                val hasFineLocation = androidx.core.content.ContextCompat.checkSelfPermission(
-                    context, android.Manifest.permission.ACCESS_FINE_LOCATION
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                val hasFineLocation = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
 
-                val hasCoarseLocation = androidx.core.content.ContextCompat.checkSelfPermission(
-                    context, android.Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                val hasCoarseLocation = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
 
                 if (isLocationGranted && (hasFineLocation || hasCoarseLocation)) {
                     try {
@@ -142,28 +176,39 @@ fun MapScreen(
 
                             userLocationLayer = layer
                         }
-                       // Log.d("my log", "MapScreen: works correctly")
 
-                    }
-                    catch (e: SecurityException){
-                        //Log.e("my log", "MapScreen: ${e.message}")
+                    } catch (e: SecurityException) {
+                        Log.e("my log", "MapScreen: ${e.message}")
                     }
                 }
-                    userLocationLayer?.isVisible = isLocationGranted
+                userLocationLayer?.isVisible = isLocationGranted
 
-                },
+            },
             modifier = Modifier.fillMaxSize(),
 
-        )
+
+            )
     }
-    LaunchedEffect(state.points) {
+    LaunchedEffect(state.points, mapView) {
         val mapObjects = mapView.mapWindow.map.mapObjects
         mapObjects.clear()
+        val imageProvider = ImageProvider.fromResource(context, R.drawable.marker_pointer)
+        val iconStyle = IconStyle().apply {
+            anchor = PointF(0.5f, 1.0f)
+        }
         state.points.forEach { point ->
-            val placemark = mapObjects.addPlacemark(Point(point.latitude, point.longtitude))
-            placemark.setIcon(ImageProvider.fromResource(context, R.drawable.place_marker))
+            Log.d("my log", "MapScreen: author ( ${point.authorName})")
+            val placemark = mapObjects.addPlacemark(Point(point.lat, point.longitude))
+            placemark.setIcon(imageProvider, iconStyle)
+
             placemark.userData = point.id
             placemark.addTapListener(tapListener)
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            mapView.mapWindow.map.removeInputListener(inputListener)
+            mapView.mapWindow.map.removeCameraListener(cameraListener)
         }
     }
 

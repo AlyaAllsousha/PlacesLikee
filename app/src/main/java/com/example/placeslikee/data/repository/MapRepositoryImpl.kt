@@ -1,31 +1,55 @@
 package com.example.placeslikee.data.repository
 
+import android.util.Log
+import com.example.placeslikee.data.MarkersSyncManager
+import com.example.placeslikee.data.local.LocalDB
+import com.example.placeslikee.data.mapper.toMarkerEntity
+import com.example.placeslikee.data.mapper.toUIMarker
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.repositories.MapRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
-class MapRepositoryImpl @Inject constructor() :MapRepository {
+class MapRepositoryImpl @Inject constructor(
+    private val localDb: LocalDB,
+    private val syncManager: MarkersSyncManager
+) :MapRepository {
+    private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     override fun getMarkers(): Flow<List<UIMarker>> {
-        return emptyFlow()
+        repositoryScope.launch {
+            syncManager.sync()
+        }
+        return localDb.markersDao().getMarkers().map { markers ->
+            markers.map {
+                it.toUIMarker()
+            }
+        }
     }
 
     override suspend fun addMarkers(newMarker: UIMarker) {
-        TODO("Not yet implemented")
+        val marker = newMarker.toMarkerEntity()
+        localDb.markersDao().createMark(marker)
+        syncManager.sync()
     }
 
-    override suspend fun updateMarker(marker: UIMarker) {
-        TODO("Not yet implemented")
-    }
 
     override suspend fun deleteMark(marker: UIMarker) {
-        TODO("Not yet implemented")
+        localDb.markersDao().markAsDeleted(marker.id)
+        syncManager.sync()
+        localDb.markersDao().deleteMark(marker.toMarkerEntity())
+
     }
 
     override suspend fun refreshMarkers() {
-        TODO("Not yet implemented")
+        syncManager.sync()
     }
 
 

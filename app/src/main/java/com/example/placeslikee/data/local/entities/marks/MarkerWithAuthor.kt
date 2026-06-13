@@ -10,5 +10,5 @@ data class MarkerWithAuthor (
         parentColumn = "authorId",
         entityColumn = "id"
     )
-    val author: UserEntity
+    val author: UserEntity?
 )

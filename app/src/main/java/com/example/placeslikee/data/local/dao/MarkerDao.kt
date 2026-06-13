@@ -24,19 +24,19 @@ interface MarkerDao {
     suspend fun updateMark(mark: MarkerEntity)
 
     @Query("UPDATE marks_table SET synced = 'PENDING_LIKED' WHERE id = :id")
-    suspend fun markAsLiked(id: Int)
+    suspend fun markAsLiked(id: String)
 
     @Query("UPDATE marks_table SET synced = 'PENDING_UPDATE' WHERE id = :id")
-    suspend fun markAsUpdated(id: Int)
+    suspend fun markAsUpdated(id: String)
 
     @Query("UPDATE marks_table SET synced = 'PENDING_CREATE' WHERE id = :id")
-    suspend fun markAsCreated(id: Int)
+    suspend fun markAsCreated(id: String)
 
     @Query("UPDATE marks_table SET synced = 'SYNCED' WHERE id = :id")
-    suspend fun markAsSynced(id: Int)
+    suspend fun markAsSynced(id: String)
 
     @Query("UPDATE marks_table SET synced = 'PENDING_DELETE' WHERE id = :id")
-    suspend fun markAsDeleted(id: Int)
+    suspend fun markAsDeleted(id: String)
 
     @Transaction
     @Query("SELECT * FROM marks_table WHERE synced != 'PENDING_DELETE'")
@@ -44,12 +44,11 @@ interface MarkerDao {
 
     @Transaction
     @Query("SELECT * FROM marks_table WHERE id = :id")
-    fun getById(id : Int): Flow<MarkerWithAuthor>
+    fun getById(id : String): Flow<MarkerWithAuthor>
 
     @Query("SELECT * FROM marks_table WHERE synced != 'SYNCED'")
-    fun getMarksForSync(): Flow<List<MarkerEntity>>
+    fun getMarksForSync(): List<MarkerEntity>
 
-    @Query("UPDATE marks_table SET synced = :state WHERE id = :id")
-    suspend fun updateSyncedState(id : Int, state : SyncState)
+
 
 }

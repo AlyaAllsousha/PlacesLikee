@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.Flow
 interface UsersDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun createUser(usersEntity: UserEntity)
+
     @Query("SELECT * FROM users_table WHERE id = :id")
-    fun getUserById(id : String):Flow<UserEntity>
+    fun getUserById(id: String): UserEntity
+
     @Delete
     suspend fun deleteUser(usersEntity: UserEntity)
 }

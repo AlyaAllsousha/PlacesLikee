@@ -1,5 +1,6 @@
 package com.example.placeslikee.data.remote
 
+import com.example.placeslikee.data.local.entities.UserEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.remote.dto.RemoteMarker
 import com.google.firebase.firestore.FirebaseFirestore
@@ -10,11 +11,13 @@ import javax.inject.Inject
 class RemoteDB @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
-    private val collection = firestore.collection("places_likee")
+    private val collectionMarkers = firestore.collection("markers")
+    private val collectionUsers = firestore.collection("users")
+
 
     suspend fun getAllMarkers(): List<RemoteMarker> {
         return try {
-            val snapshot = collection.get().await()
+            val snapshot = collectionMarkers.get().await()
             snapshot.documents.mapNotNull { doc ->
                 doc.toObject(RemoteMarker::class.java)
             }
@@ -24,6 +27,25 @@ class RemoteDB @Inject constructor(
     }
 
     suspend fun saveMarker(mark: RemoteMarker) {
-        collection.document(mark.id).set(mark).await()
+        collectionMarkers.document(mark.id).set(mark).await()
+    }
+
+    suspend fun deleteMarker(mark: RemoteMarker){
+        collectionMarkers.document(mark.id).delete()
+    }
+
+    suspend fun getAllUsers(): List<UserEntity> {
+        return try {
+            val snapshot = collectionUsers.get().await()
+            snapshot.documents.mapNotNull { doc ->
+                doc.toObject(UserEntity::class.java)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun saveUser(user: UserEntity) {
+        collectionUsers.document(user.id).set(user).await()
     }
 }

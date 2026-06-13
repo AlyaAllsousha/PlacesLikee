@@ -1,6 +1,8 @@
 package com.example.placeslikee.presentation.navigation
 
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.getValue
 
 
@@ -34,8 +36,16 @@ fun NavHostContainer(
         navController = navController,
         startDestination = "map",
         modifier = Modifier.padding(paddingValues = padding),
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None },
         builder = {
-            composable("map") {
+            composable(
+                route = "map",
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None }
+            ) {
                 MainScreen()
             }
             composable("profile") {
