@@ -2,6 +2,7 @@ package com.example.placeslikee.data.local.entities.marks
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.google.firebase.Timestamp
 
 @Entity("marks_table")
 data class MarkerEntity(
@@ -15,5 +16,6 @@ data class MarkerEntity(
     var likesAmount: Int,
     val likedByUser: Boolean = false,
     val image: String?,
-    val synced: SyncState = SyncState.PENDING_CREATE
+    val synced: SyncState = SyncState.PENDING_CREATE,
+    val localTimestamp: Long = System.currentTimeMillis()
 )

@@ -1,5 +1,7 @@
 package com.example.placeslikee.data.remote
 
+import android.util.Log
+import androidx.compose.runtime.currentComposer
 import com.example.placeslikee.data.local.entities.UserEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.remote.dto.RemoteMarker
@@ -11,7 +13,7 @@ import javax.inject.Inject
 class RemoteDB @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
-    private val collectionMarkers = firestore.collection("markers")
+    private val collectionMarkers = firestore.collection("marker")
     private val collectionUsers = firestore.collection("users")
 
 
@@ -22,11 +24,13 @@ class RemoteDB @Inject constructor(
                 doc.toObject(RemoteMarker::class.java)
             }
         } catch (e: Exception) {
+            Log.d("my log", "getAllMarkers: remote source error: $e")
             emptyList()
         }
     }
 
     suspend fun saveMarker(mark: RemoteMarker) {
+        val markerWithTimestamp = mark.copy(remoteTimestamp = System.currentTimeMillis())
         collectionMarkers.document(mark.id).set(mark).await()
     }
 

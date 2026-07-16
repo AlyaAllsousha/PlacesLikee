@@ -59,6 +59,7 @@ dependencies {
 
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation("com.yandex.android:maps.mobile:4.8.1-lite")
 

@@ -9,6 +9,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -26,6 +30,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.placeslikee.R
+import com.example.placeslikee.presentation.map.details.MarkerDetailsContent
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -43,6 +48,7 @@ import com.yandex.mapkit.user_location.UserLocationView
 import com.yandex.runtime.image.ImageProvider
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
     viewModel: MapViewModel = hiltViewModel<MapViewModel>()
@@ -52,6 +58,12 @@ fun MapScreen(
     val mapView = MapViewHelper()
 
     val isFirstTimeLoading by viewModel.isFirstTimeLoading.collectAsState()
+
+    //saving the selected marker for showing its details
+    val selectedMarker by viewModel.selectedMarker.collectAsState()
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false
+    )
 
     var userLocationLayer by remember { mutableStateOf<UserLocationLayer?>(null) }
 
@@ -195,14 +207,26 @@ fun MapScreen(
         val imageProvider = ImageProvider.fromResource(context, R.drawable.marker_pointer)
         val iconStyle = IconStyle().apply {
             anchor = PointF(0.5f, 1.0f)
+            scale = 0.07f
         }
         state.points.forEach { point ->
-            Log.d("my log", "MapScreen: author ( ${point.authorName})")
+            Log.d("my log", "MapScreen: id ( ${point.id})")
             val placemark = mapObjects.addPlacemark(Point(point.lat, point.longitude))
             placemark.setIcon(imageProvider, iconStyle)
 
             placemark.userData = point.id
             placemark.addTapListener(tapListener)
+        }
+    }
+    selectedMarker?.let {marker ->
+        ModalBottomSheet(
+            onDismissRequest = {
+                viewModel.dismissMarkerDetails()
+            },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            MarkerDetailsContent(marker)
         }
     }
     DisposableEffect(Unit) {

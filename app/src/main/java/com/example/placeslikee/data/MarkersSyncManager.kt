@@ -52,7 +52,9 @@ class MarkersSyncManager @Inject constructor(
             }
             val remoteMarkers = remoteDB.getAllMarkers()
             for (dto in remoteMarkers) {
-                markerDao.createMark(dto.toMarkerEntity())
+                val existingMarker = markerDao.getByIdSynced(dto.id)
+                if(existingMarker == null || (dto.remoteTimestamp ?: 0) > existingMarker.mark.localTimestamp)
+                    markerDao.createMark(dto.toMarkerEntity())
             }
             val remoteUsers = remoteDB.getAllUsers()
             for (user in remoteUsers) {

@@ -1,5 +1,7 @@
 package com.example.placeslikee.domain.models
 
+import com.google.firebase.Timestamp
+
 data class UIMarker(
     val id: String,
     val lat: Double,
@@ -10,5 +12,6 @@ data class UIMarker(
     val description: String?,
     val likesAmount: Int,
     val likedByUser: Boolean = false,
-    val image: String?
+    val image: String?,
+    val uiTimestamp: Long
 )

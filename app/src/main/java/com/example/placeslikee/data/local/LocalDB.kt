@@ -10,7 +10,7 @@ import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 
 @Database(
     entities = [MarkerEntity::class, UserEntity::class],
-    version = 2
+    version = 3
 )
 @TypeConverters(MyTypeConverters::class)
 abstract class LocalDB : RoomDatabase() {
