@@ -8,7 +8,7 @@ import javax.inject.Inject
 class GetMapMarkUseCase @Inject constructor(
     val repository: MapRepository
 ) {
-    fun exec(): Flow<List<UIMarker>> {
+    operator fun invoke(): Flow<List<UIMarker>> {
         return repository.getMarkers()
     }
 }

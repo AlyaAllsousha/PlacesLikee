@@ -51,7 +51,8 @@ import com.yandex.runtime.image.ImageProvider
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    viewModel: MapViewModel = hiltViewModel<MapViewModel>()
+    viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
+    onNavigateToAuth: () -> Unit
 ) {
     val state by viewModel.mapState.collectAsState()
     val context = LocalContext.current
@@ -62,7 +63,7 @@ fun MapScreen(
     //saving the selected marker for showing its details
     val selectedMarker by viewModel.selectedMarker.collectAsState()
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false
+        skipPartiallyExpanded = true
     )
 
     var userLocationLayer by remember { mutableStateOf<UserLocationLayer?>(null) }
@@ -142,6 +143,9 @@ fun MapScreen(
         }
     }
     LaunchedEffect(Unit) {
+        viewModel.navigateToAuth.collect {
+            onNavigateToAuth()
+        }
         if (!isLocationGranted) {
             launcher.launch(
                 arrayOf(
@@ -210,7 +214,6 @@ fun MapScreen(
             scale = 0.07f
         }
         state.points.forEach { point ->
-            Log.d("my log", "MapScreen: id ( ${point.id})")
             val placemark = mapObjects.addPlacemark(Point(point.lat, point.longitude))
             placemark.setIcon(imageProvider, iconStyle)
 

@@ -46,13 +46,11 @@ interface MarkerDao {
     @Query("SELECT * FROM marks_table WHERE id = :id")
     fun getById(id : String): Flow<MarkerWithAuthor?>
 
+    @Transaction
     @Query("SELECT * FROM marks_table WHERE id = :id")
     suspend fun getByIdSynced(id : String): MarkerWithAuthor?
 
 
     @Query("SELECT * FROM marks_table WHERE synced != 'SYNCED'")
     fun getMarksForSync(): List<MarkerEntity>
-
-
-
 }

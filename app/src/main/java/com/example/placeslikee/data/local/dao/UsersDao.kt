@@ -14,7 +14,10 @@ interface UsersDao {
     suspend fun createUser(usersEntity: UserEntity)
 
     @Query("SELECT * FROM users_table WHERE id = :id")
-    fun getUserById(id: String): UserEntity
+    suspend fun getUserById(id: String): UserEntity?
+
+    @Query("SELECT * FROM users_table WHERE id = :id")
+    fun getUserByIdFlow(id: String): Flow<UserEntity?>
 
     @Delete
     suspend fun deleteUser(usersEntity: UserEntity)

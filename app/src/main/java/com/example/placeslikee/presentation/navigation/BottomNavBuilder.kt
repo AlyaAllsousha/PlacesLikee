@@ -3,6 +3,9 @@ package com.example.placeslikee.presentation.navigation
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.getValue
 
 
@@ -16,16 +19,16 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Constraints
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.placeslikee.presentation.MainScreen
+import com.example.placeslikee.presentation.main.MainScreen
+import com.example.placeslikee.presentation.authentication.AuthScreen
 import com.example.placeslikee.presentation.list.ListScreen
-import com.example.placeslikee.presentation.map.MapScreen
 import com.example.placeslikee.presentation.profile.ProfileScreen
-import kotlinx.coroutines.selects.select
 
 @Composable
 fun NavHostContainer(
@@ -34,19 +37,39 @@ fun NavHostContainer(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "map",
+        startDestination = "main",
         modifier = Modifier.padding(paddingValues = padding),
-        enterTransition = { EnterTransition.None },
-        exitTransition = { ExitTransition.None },
-        popEnterTransition = { EnterTransition.None },
-        popExitTransition = { ExitTransition.None },
+        enterTransition = {
+            fadeIn(animationSpec = tween(250))
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(250))
+        },
+        popEnterTransition = {
+            fadeIn(animationSpec = tween(250))
+        },
+        popExitTransition = {
+            fadeOut(animationSpec = tween(250))
+        },
         builder = {
             composable(
-                route = "map",
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None }
+                route = "main"
             ) {
-                MainScreen()
+                MainScreen(
+                    onNavigateToAuth = {
+                        navController.navigate("auth")
+                    },
+                    onNavigateToProfile = {
+                        navController.navigate("profile")
+                    }
+                )
+            }
+            composable("auth"){
+                AuthScreen(
+                    onNavigateToMap = {
+                        navController.popBackStack()
+                    }
+                )
             }
             composable("profile") {
                 ProfileScreen()
@@ -67,10 +90,12 @@ fun BottomNavigationBar(navController: NavController) {
         val currentRoute = backStackEntry?.destination?.route
 
         Constants.BottomNavItems.forEach { navItem ->
-            if (navItem.label != "list") {
                 NavigationBarItem(
                     selected = currentRoute == navItem.route,
                     onClick = {
+                        if(navItem.route == "main" && currentRoute == "profile"){
+                            navController.popBackStack()
+                        }
                         navController.navigate(navItem.route){
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
@@ -95,7 +120,6 @@ fun BottomNavigationBar(navController: NavController) {
                     )
                 )
 
-            }
         }
 
     }

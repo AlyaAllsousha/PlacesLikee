@@ -5,6 +5,7 @@ import androidx.compose.runtime.currentComposer
 import com.example.placeslikee.data.local.entities.UserEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.remote.dto.RemoteMarker
+import com.example.placeslikee.data.remote.dto.RemoteUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.tasks.await
@@ -30,7 +31,6 @@ class RemoteDB @Inject constructor(
     }
 
     suspend fun saveMarker(mark: RemoteMarker) {
-        val markerWithTimestamp = mark.copy(remoteTimestamp = System.currentTimeMillis())
         collectionMarkers.document(mark.id).set(mark).await()
     }
 
@@ -38,18 +38,19 @@ class RemoteDB @Inject constructor(
         collectionMarkers.document(mark.id).delete()
     }
 
-    suspend fun getAllUsers(): List<UserEntity> {
+    suspend fun getAllUsers(): List<RemoteUser> {
         return try {
             val snapshot = collectionUsers.get().await()
             snapshot.documents.mapNotNull { doc ->
-                doc.toObject(UserEntity::class.java)
+                doc.toObject(RemoteUser::class.java)
             }
         } catch (e: Exception) {
+            Log.e("my log", "getAllUsers: Firebase error: ${e.message}", e)
             emptyList()
         }
     }
 
-    suspend fun saveUser(user: UserEntity) {
+    suspend fun saveUser(user: RemoteUser) {
         collectionUsers.document(user.id).set(user).await()
     }
 }

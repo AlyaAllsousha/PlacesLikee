@@ -11,7 +11,7 @@ data class MarkerEntity(
     val lat: Double,
     val longitude: Double,
     val name:String,
-    val authorId: String = "",
+    val authorId: String?,
     val description: String?,
     var likesAmount: Int,
     val likedByUser: Boolean = false,

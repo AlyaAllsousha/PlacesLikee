@@ -1,7 +1,6 @@
 package com.example.placeslikee.presentation.map.details
 
-import android.R
-import android.graphics.drawable.Icon
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,27 +64,35 @@ fun MarkerDetailsContent(marker: UIMarker) {
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "${marker.lat} ${marker.longitude}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.outline
             )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = marker.description ?: "Без комментариев...",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Row (
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ){
-            Text(
-                text = "Атвор: ${marker.authorName ?: "Неизвестен"}",
-                style = MaterialTheme.typography.labelLarge
-            )
+            Row{
+                Text(
+                    text = "Атвор: ",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.outline
+
+                )
+                Text(
+                    text = marker.authorName ?: "Неизвестный",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ){
@@ -102,14 +109,13 @@ fun MarkerDetailsContent(marker: UIMarker) {
                     style = MaterialTheme.typography.labelLarge
                 )
             }
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {},
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Построить маршрут")
-            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = {},
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Построить маршрут")
         }
     }
 }

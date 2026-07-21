@@ -26,6 +26,9 @@ android {
             name = "MAPKIT_API_KEY",
             value = "\"${rootProject.extra["mapkitApiKey"]}\""
         )
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
     }
 
     buildTypes {
@@ -53,7 +56,6 @@ android {
 
 dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
-    implementation(libs.firebase.firestore)
     ksp("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
 
@@ -69,8 +71,14 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
-
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation(libs.googleid)
+
+
+
+
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
