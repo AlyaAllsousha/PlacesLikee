@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +31,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.placeslikee.R
+import com.example.placeslikee.domain.models.NewMarkerIfo
 import com.example.placeslikee.presentation.map.details.MarkerDetailsContent
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
@@ -46,18 +48,20 @@ import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.mapkit.user_location.UserLocationObjectListener
 import com.yandex.mapkit.user_location.UserLocationView
 import com.yandex.runtime.image.ImageProvider
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
     viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
-    onNavigateToAuth: () -> Unit
+    onNavigateToAuth: () -> Unit,
+    onNavigateToCreateMarker: (NewMarkerIfo) -> Unit
 ) {
     val state by viewModel.mapState.collectAsState()
     val context = LocalContext.current
     val mapView = MapViewHelper()
-
     val isFirstTimeLoading by viewModel.isFirstTimeLoading.collectAsState()
 
     //saving the selected marker for showing its details
@@ -73,6 +77,7 @@ fun MapScreen(
             override fun onMapTap(p0: Map, p1: Point) {}
             override fun onMapLongTap(p0: Map, p1: Point) {
                 viewModel.onMapClick(MapEvent.OnMapLongClick(p1.latitude, p1.longitude))
+
             }
         }
     }
@@ -86,7 +91,7 @@ fun MapScreen(
                 p3: Boolean
             ) {
                 viewModel.updateCameraPosition(p1)
-                if(p3 && isFirstTimeLoading)
+                if (p3 && isFirstTimeLoading)
                     viewModel.setIsFirstTimeLoading(false)
             }
 
@@ -146,6 +151,15 @@ fun MapScreen(
         viewModel.navigateToAuth.collect {
             onNavigateToAuth()
         }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.navigateToCreateMarker.collect { info ->
+            Log.d("my log", "MapScreen: navigate to Create marker")
+            onNavigateToCreateMarker(info)
+        }
+    }
+
+    LaunchedEffect(Unit) {
         if (!isLocationGranted) {
             launcher.launch(
                 arrayOf(
@@ -221,7 +235,7 @@ fun MapScreen(
             placemark.addTapListener(tapListener)
         }
     }
-    selectedMarker?.let {marker ->
+    selectedMarker?.let { marker ->
         ModalBottomSheet(
             onDismissRequest = {
                 viewModel.dismissMarkerDetails()

@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -18,17 +19,23 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Constraints
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.navArgument
 import com.example.placeslikee.presentation.main.MainScreen
 import com.example.placeslikee.presentation.authentication.AuthScreen
 import com.example.placeslikee.presentation.list.ListScreen
+import com.example.placeslikee.presentation.newmarker.CreateMarkerScreen
 import com.example.placeslikee.presentation.profile.ProfileScreen
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.time.delay
 
 @Composable
 fun NavHostContainer(
@@ -37,8 +44,8 @@ fun NavHostContainer(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "main",
-        modifier = Modifier.padding(paddingValues = padding),
+        startDestination = NavRoutes.Main.routes,
+        modifier = Modifier.padding(paddingValues = padding).consumeWindowInsets(padding),
         enterTransition = {
             fadeIn(animationSpec = tween(250))
         },
@@ -53,29 +60,45 @@ fun NavHostContainer(
         },
         builder = {
             composable(
-                route = "main"
+                route = NavRoutes.Main.routes
             ) {
                 MainScreen(
                     onNavigateToAuth = {
-                        navController.navigate("auth")
+                        navController.navigate(NavRoutes.Auth.routes)
                     },
                     onNavigateToProfile = {
-                        navController.navigate("profile")
+                        navController.navigate(NavRoutes.Profile.routes)
+                    },
+                    onNavigateToCreateMarker = {info ->
+                        navController.navigate("${NavRoutes.CreateMark.routes}/${info.lat}/${info.lon}")
                     }
                 )
             }
-            composable("auth"){
+            composable(NavRoutes.Auth.routes){
                 AuthScreen(
                     onNavigateToMap = {
                         navController.popBackStack()
                     }
                 )
             }
-            composable("profile") {
+            composable(NavRoutes.Profile.routes) {
                 ProfileScreen()
             }
-            composable("list"){
+            composable(NavRoutes.List.routes){
                 ListScreen()
+            }
+            composable(
+                route = "${NavRoutes.CreateMark.routes}/{lat}/{lon}",
+                arguments = listOf(
+                    navArgument("lat"){type = NavType.StringType},
+                    navArgument("lon"){type = NavType.StringType}
+                )
+            ) {
+                CreateMarkerScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     )
@@ -88,14 +111,15 @@ fun BottomNavigationBar(navController: NavController) {
     ){
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
-
+        val scope = rememberCoroutineScope()
         Constants.BottomNavItems.forEach { navItem ->
                 NavigationBarItem(
                     selected = currentRoute == navItem.route,
                     onClick = {
-                        if(navItem.route == "main" && currentRoute == "profile"){
+                        if(navItem.route == NavRoutes.Main.routes){
                             navController.popBackStack()
                         }
+
                         navController.navigate(navItem.route){
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true

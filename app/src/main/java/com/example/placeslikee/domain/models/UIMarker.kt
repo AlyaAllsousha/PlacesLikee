@@ -10,7 +10,7 @@ data class UIMarker(
     val authorName: String?,
     val authorId: String = "",
     val description: String?,
-    val likesAmount: Int,
+    val likesAmount: Int = 0,
     val likedByUser: Boolean = false,
     val image: String?,
     val uiTimestamp: Long

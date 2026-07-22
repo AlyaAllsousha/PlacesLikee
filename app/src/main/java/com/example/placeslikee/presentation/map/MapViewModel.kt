@@ -1,7 +1,9 @@
 package com.example.placeslikee.presentation.map
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.placeslikee.domain.models.NewMarkerIfo
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.usecase.auth.GetCurrentIdUseCase
 import com.example.placeslikee.domain.usecase.GetMapMarkUseCase
@@ -35,14 +37,21 @@ class MapViewModel @Inject constructor(
     private val _navigateToAuth = MutableSharedFlow<Unit>()
     val navigateToAuth = _navigateToAuth.asSharedFlow()
 
+
+    //Create marker navigation
+    private val _navigateToCreateMarker = MutableSharedFlow<NewMarkerIfo>()
+    val navigateToCreateMarker = _navigateToCreateMarker.asSharedFlow()
+
     fun updateCameraPosition(position: CameraPosition) {
         _cameraPosition.value = position
 
     }
+
     fun getLatestCameraPosition(): CameraPosition? = _cameraPosition.value
-    fun setIsFirstTimeLoading(value: Boolean){
+    fun setIsFirstTimeLoading(value: Boolean) {
         _isFirstTimeLoading.value = value
     }
+
     init {
         loadPoints()
     }
@@ -72,25 +81,24 @@ class MapViewModel @Inject constructor(
             is MapEvent.onPointClick -> {
                 //if the creator -> ChangeMark
                 //else -> MarkDiscription
-                val clickMarker = mapState.value.points.find { it.id == event.pointId}
+                val clickMarker = mapState.value.points.find { it.id == event.pointId }
                 _selectedMarker.value = clickMarker
             }
         }
     }
 
-    fun dismissMarkerDetails(){
+    fun dismissMarkerDetails() {
         _selectedMarker.value = null
     }
-    private fun handleLongClick(lat: Double, lon: Double){
+
+    private fun handleLongClick(lat: Double, lon: Double) {
         viewModelScope.launch {
-            if(!isUserLoggedInUseCase()){
+            if (!isUserLoggedInUseCase()) {
                 _navigateToAuth.emit(Unit)
-            }
-            else{
+            } else {
                 val userId = getCurrentIdUseCase()
-                if(userId != null){
-                    //Create new marker
-                    TODO()
+                if (userId != null) {
+                    _navigateToCreateMarker.emit(NewMarkerIfo(lat, lon))
                 }
             }
         }

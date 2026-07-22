@@ -3,6 +3,7 @@ package com.example.placeslikee.data.repository
 import android.util.Log
 import com.example.placeslikee.data.MarkersSyncManager
 import com.example.placeslikee.data.local.LocalDB
+import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.mapper.toMarkerEntity
 import com.example.placeslikee.data.mapper.toUIMarker
 import com.example.placeslikee.domain.models.UIMarker
@@ -34,8 +35,8 @@ class MapRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun addMarkers(newMarker: UIMarker) {
-        val marker = newMarker.toMarkerEntity()
+    override suspend fun addMarkers(newMarker: MarkerEntity) {
+        val marker = newMarker
         localDb.markersDao().createMark(marker)
         syncManager.sync()
     }
@@ -45,10 +46,4 @@ class MapRepositoryImpl @Inject constructor(
         localDb.markersDao().markAsDeleted(marker.id)
         syncManager.sync()
     }
-
-    override suspend fun refreshMarkers() {
-        syncManager.sync()
-    }
-
-
 }

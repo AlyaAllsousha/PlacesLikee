@@ -1,5 +1,6 @@
 package com.example.placeslikee.presentation.authentication
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -76,6 +77,7 @@ class AuthViewModel @Inject constructor(
             e.message?.contains("password") == true -> "Неверный пароль"
             e.message?.contains("email") == true -> "Неверный Email"
             e.message?.contains("network") == true -> "Нет интернета"
+            e.message?.contains("credential is incorrect") == true -> "Неверные почта или пароль"
             else -> "Ошибка: ${e.localizedMessage}"
          }
     }

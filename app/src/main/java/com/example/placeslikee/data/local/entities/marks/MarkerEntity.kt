@@ -13,7 +13,7 @@ data class MarkerEntity(
     val name:String,
     val authorId: String?,
     val description: String?,
-    var likesAmount: Int,
+    var likesAmount: Int = 0,
     val likedByUser: Boolean = false,
     val image: String?,
     val synced: SyncState = SyncState.PENDING_CREATE,

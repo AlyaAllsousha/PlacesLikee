@@ -36,12 +36,6 @@ fun RemoteMarker.toMarkerEntity(): MarkerEntity = MarkerEntity(
 )
 
 fun MarkerWithAuthor.toUIMarker(): UIMarker {
-    Log.d("my log", """ Mapper - 
-        Marker: ${mark.id}
-        AuthorId: '${mark.authorId}'
-        Author: ${author?.id ?: "NULL"}
-        Author name: ${author?.name ?: "NULL"}
-    """.trimIndent())
     return UIMarker(
         id = mark.id,
         lat = mark.lat,
