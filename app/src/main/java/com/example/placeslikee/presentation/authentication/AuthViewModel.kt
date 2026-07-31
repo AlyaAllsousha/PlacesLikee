@@ -44,6 +44,7 @@ class AuthViewModel @Inject constructor(
             }
             result.onSuccess {
                 _state.update { it.copy(status = AuthUiState.Success) }
+
             }
                 .onFailure { error ->
                     _state.update { it.copy(status = AuthUiState.Error(mapErrorToMessage(error))) }

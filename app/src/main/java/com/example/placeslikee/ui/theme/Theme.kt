@@ -3,6 +3,7 @@ package com.example.placeslikee.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -10,28 +11,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = OceanicTurquoise,
+    primary = EmeraldGreen,
     onPrimary = Color.White,
-    primaryContainer = OceanicTurquoise.copy(alpha = 0.12f),
-    onPrimaryContainer = OceanicTurquoise,
+    primaryContainer = EmeraldGreen.copy(alpha = 0.12f),
+    onPrimaryContainer = EmeraldGreen,
 
-    secondary = SunsetCoral,
+    secondary = Terracotta,
     onSecondary = Color.White,
-    secondaryContainer = SunsetCoral.copy(alpha = 0.12f),
-    onSecondaryContainer = SunsetCoral,
+    secondaryContainer = Terracotta.copy(alpha = 0.12f),
+    onSecondaryContainer = Terracotta,
 
-    tertiary = OceanicTurquoise.copy(alpha = 0.8f),
+    tertiary = EmeraldGreen.copy(alpha = 0.8f),
     onTertiary = Color.White,
 
-    background = CloudyWhite,
+    background = WarmPaper,
     onBackground = TextHighEmphasisLight,
 
-    surface = Color.White,
+    surface = Color.White,  // Карточки постов - чистый белый
     onSurface = TextHighEmphasisLight,
-    surfaceVariant = CloudyWhite,
+    surfaceVariant = WarmPaper,
     onSurfaceVariant = TextMediumEmphasisLight,
 
     error = ErrorLight,
@@ -39,47 +41,50 @@ private val LightColorScheme = lightColorScheme(
     errorContainer = ErrorLight.copy(alpha = 0.12f),
     onErrorContainer = ErrorLight,
 
-
-    outline = TextLowEmphasisLight,
-    outlineVariant = TextLowEmphasisLight.copy(alpha = 0.5f)
+    outline = DividerLight,
+    outlineVariant = DividerLight.copy(alpha = 0.5f)
 )
-
+val Shapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp)
+)
 private val DarkColorScheme = darkColorScheme(
-    primary = GlowingTurquoise,
-    onPrimary = NightGraphite,
-    primaryContainer = GlowingTurquoise.copy(alpha = 0.20f),
-    onPrimaryContainer = GlowingTurquoise,
+    primary = EmeraldGreenLight,           // Светлый изумруд для кнопок в темной теме
+    onPrimary = NightBackground,           // Текст на кнопке - черный
+    primaryContainer = EmeraldGreenLight.copy(alpha = 0.20f),
+    onPrimaryContainer = EmeraldGreenLight,
 
-    secondary = SoftSalmon,
-    onSecondary = NightGraphite,
-    secondaryContainer = SoftSalmon.copy(alpha = 0.20f),
-    onSecondaryContainer = SoftSalmon,
+    secondary = TerracottaLight,           // Яркий терракотта для лайков
+    onSecondary = NightBackground,
+    secondaryContainer = TerracottaLight.copy(alpha = 0.20f),
+    onSecondaryContainer = TerracottaLight,
 
-    tertiary = GlowingTurquoise.copy(alpha = 0.8f),
-    onTertiary = NightGraphite,
+    tertiary = EmeraldGreenLight.copy(alpha = 0.8f),
+    onTertiary = NightBackground,
 
-    background = NightGraphite,
+    background = NightBackground,          // Фон ленты - полуночный черный
     onBackground = TextHighEmphasisDark,
 
-    surface = CardGraphite,
+    surface = NightSurface,                // Карточки постов - темный сланец
     onSurface = TextHighEmphasisDark,
-    surfaceVariant = NightGraphite,
+    surfaceVariant = NightBackground,
     onSurfaceVariant = TextMediumEmphasisDark,
 
     error = ErrorDark,
-    onError = NightGraphite,
+    onError = NightBackground,
     errorContainer = ErrorDark.copy(alpha = 0.20f),
     onErrorContainer = ErrorDark,
 
-    outline = TextLowEmphasisDark,
-    outlineVariant = TextLowEmphasisDark.copy(alpha = 0.5f)
+    outline = DividerDark,
+    outlineVariant = DividerDark.copy(alpha = 0.5f)
 )
-
 
 @Composable
 fun PlacesLikeeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -88,16 +93,19 @@ fun PlacesLikeeTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+
     val view = LocalView.current
 
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+
+            WindowCompat.setDecorFitsSystemWindows(window, false)
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = !darkTheme
                 isAppearanceLightNavigationBars = !darkTheme
@@ -105,10 +113,10 @@ fun PlacesLikeeTheme(
         }
     }
 
-
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = Typography,
-            content = content
-        )
-    }
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        shapes = Shapes,
+        content = content
+    )
+}

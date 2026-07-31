@@ -20,7 +20,6 @@ class getCurrentUserUseCase @Inject constructor(
             else{
                 localDB.usersDao().getUserByIdFlow(userId)
             }
-
         }
     }
 }

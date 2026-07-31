@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Button
@@ -35,7 +37,8 @@ fun MarkerDetailsContent(marker: UIMarker) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(32.dp, 16.dp),
+            .padding(32.dp, 16.dp)
+            .verticalScroll(rememberScrollState()),
     ) {
         if (!marker.image.isNullOrEmpty()) {
             SubcomposeAsyncImage(
@@ -113,7 +116,9 @@ fun MarkerDetailsContent(marker: UIMarker) {
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = {},
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium
+
         ) {
             Text("Построить маршрут")
         }

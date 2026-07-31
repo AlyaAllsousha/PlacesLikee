@@ -1,8 +1,11 @@
 package com.example.placeslikee.presentation.main
 
-import android.R.attr.title
+import android.graphics.drawable.Icon
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,26 +14,31 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.statusBarsPadding
+
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -40,15 +48,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.placeslikee.domain.models.NewMarkerIfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     onNavigateToAuth: () -> Unit,
@@ -57,6 +67,8 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val user by viewModel.currentUser.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+
     var isMapVisible by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -72,11 +84,13 @@ fun MainScreen(
     Scaffold(
         topBar = {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
 
-            ) {
+                ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable(
@@ -97,7 +111,7 @@ fun MainScreen(
                     }
                     Text(
                         text = user?.name ?: "",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
                 Button(
@@ -107,20 +121,25 @@ fun MainScreen(
                         } else {
                             navigateSafely { onNavigateToAuth() }
                         }
-                    }
+                    },
+                    shape = MaterialTheme.shapes.medium,
                 ) {
-                    Text(text = if (user != null) "Выйти" else "Войти")
+                    Text(
+                        text = if (user != null) "Выйти" else "Войти"
+                    )
                 }
             }
         }
     ) { paddingValue ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValue)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -153,26 +172,54 @@ fun MainScreen(
                 )
 
             }
+
+
             Spacer(Modifier.height(16.dp))
             if (isMapVisible) {
-                MapScreen(
-                    onNavigateToAuth = {
-                        navigateSafely { onNavigateToAuth() }
-                    },
-                    onNavigateToCreateMarker = {
-                        navigateSafely { onNavigateToCreateMarker(it) }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    MapScreen(
+                        onNavigateToAuth = {
+                            navigateSafely { onNavigateToAuth() }
+                        },
+                        onNavigateToCreateMarker = {
+                            navigateSafely { onNavigateToCreateMarker(it) }
+                        }
+                    )
+                    FilledIconButton(
+                        onClick = { viewModel.refresh() },
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(16.dp)
+                            .size(48.dp),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Обновить карту"
+                            )
+                        }
                     }
-                )
+                }
             }
         }
+
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 isMapVisible = true
-            }
-            else if(event == Lifecycle.Event.ON_PAUSE){
+            } else if (event == Lifecycle.Event.ON_PAUSE) {
                 isMapVisible = false
             }
         }

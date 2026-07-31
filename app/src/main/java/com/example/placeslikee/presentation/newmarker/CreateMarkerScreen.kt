@@ -80,59 +80,61 @@ fun CreateMarkerScreen(
         snackbarHost = { SnackbarHost(snackBarHostState) },
         topBar = {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Новое место",
-                        style = MaterialTheme.typography.titleLarge
-                    )
+            ) {
+                Text(
+                    text = "Новое место",
+                    style = MaterialTheme.typography.headlineMedium
+                )
 
             }
         }
-    ) {paddingValues ->
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .consumeWindowInsets(paddingValues)
                 .imePadding()
-                .pointerInput(Unit){
+                .pointerInput(Unit) {
                     detectTapGestures(onTap = {
                         focusManager.clearFocus()
                     })
                 }
         )
         {
-            Column (
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
-            ){
-                Column (
+            ) {
+                Column(
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
-                ){
+                ) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = {name = it},
-                        label = { Text("Название")},
+                        onValueChange = { name = it },
+                        label = { Text("Название") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        isError = name.isBlank()  && state is NewMarkerState.Error,
+                        isError = name.isBlank() && state is NewMarkerState.Error,
                     )
                     OutlinedTextField(
                         value = description,
-                        onValueChange ={description = it},
-                        label = { Text("Описание")},
+                        onValueChange = { description = it },
+                        label = { Text("Описание") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = image,
-                        onValueChange = {image = it},
-                        label = { Text("Ссылка на фото")},
+                        onValueChange = { image = it },
+                        label = { Text("Ссылка на фото") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -145,17 +147,20 @@ fun CreateMarkerScreen(
                         val finalImg = image.ifBlank { null }
                         viewModel.onSaveClick(name, finalDesc, finalImg)
                     },
+                    shape = MaterialTheme.shapes.medium,
+
                     modifier = Modifier.fillMaxWidth(),
                     enabled = name.isNotBlank() && state !is NewMarkerState.Loading
                 ) {
                     Text(
                         modifier = Modifier.padding(8.dp),
-                        text = "Сохранить маркер")
+                        text = "Сохранить маркер"
+                    )
                 }
             }
-            if(state is NewMarkerState.Loading){
+            if (state is NewMarkerState.Loading) {
                 CircularProgressIndicator(
-                    modifier  = Modifier.align (Alignment.Center)
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
         }

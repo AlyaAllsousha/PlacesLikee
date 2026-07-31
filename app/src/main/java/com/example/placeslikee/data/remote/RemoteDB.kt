@@ -30,6 +30,7 @@ class RemoteDB @Inject constructor(
         }
     }
 
+
     suspend fun saveMarker(mark: RemoteMarker) {
         collectionMarkers.document(mark.id).set(mark).await()
     }
@@ -47,6 +48,19 @@ class RemoteDB @Inject constructor(
         } catch (e: Exception) {
             Log.e("my log", "getAllUsers: Firebase error: ${e.message}", e)
             emptyList()
+        }
+    }
+
+    suspend fun getUserById(userId: String): RemoteUser?{
+        return try {
+            collectionUsers.document(userId)
+                .get()
+                .await()
+                .toObject(RemoteUser::class.java)
+        }
+        catch (e: Exception){
+            Log.e("my log", "getUserById: ${e.message}", e)
+            null
         }
     }
 

@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class GetMapMarkUseCase @Inject constructor(
-    val repository: MapRepository
+   private val repository: MapRepository
 ) {
     operator fun invoke(): Flow<List<UIMarker>> {
         return repository.getMarkers()

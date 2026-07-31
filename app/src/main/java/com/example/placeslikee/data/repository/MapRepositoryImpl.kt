@@ -1,13 +1,14 @@
 package com.example.placeslikee.data.repository
 
 import android.util.Log
-import com.example.placeslikee.data.MarkersSyncManager
+import com.example.placeslikee.workmanger.MarkersSyncManager
 import com.example.placeslikee.data.local.LocalDB
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.mapper.toMarkerEntity
 import com.example.placeslikee.data.mapper.toUIMarker
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.repositories.MapRepository
+import com.example.placeslikee.workmanger.SyncWorkerScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,14 +21,11 @@ import javax.inject.Inject
 
 class MapRepositoryImpl @Inject constructor(
     private val localDb: LocalDB,
-    private val syncManager: MarkersSyncManager
+    private val syncScheduler: SyncWorkerScheduler
 ) :MapRepository {
-    private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun getMarkers(): Flow<List<UIMarker>> {
-        repositoryScope.launch {
-            syncManager.sync()
-        }
+        syncScheduler.scheduleSingleSync()
         return localDb.markersDao().getMarkers().map { markers ->
             markers.map {
                 it.toUIMarker()
@@ -38,12 +36,26 @@ class MapRepositoryImpl @Inject constructor(
     override suspend fun addMarkers(newMarker: MarkerEntity) {
         val marker = newMarker
         localDb.markersDao().createMark(marker)
-        syncManager.sync()
+        syncScheduler.scheduleSingleSync()
     }
 
 
     override suspend fun deleteMark(marker: UIMarker) {
         localDb.markersDao().markAsDeleted(marker.id)
-        syncManager.sync()
+        syncScheduler.scheduleSingleSync()
     }
+
+    override suspend fun getMarkersByUserId(userId: String): Flow<List<UIMarker>> {
+        syncScheduler.scheduleSingleSync()
+        return localDb.markersDao().getByUserId(userId).map {
+            it.map {
+                it.toUIMarker()
+            }
+        }
+    }
+
+    override suspend fun refresh() {
+        syncScheduler.scheduleSingleSync()
+    }
+
 }

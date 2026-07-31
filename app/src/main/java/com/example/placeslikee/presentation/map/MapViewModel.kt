@@ -7,9 +7,11 @@ import com.example.placeslikee.domain.models.NewMarkerIfo
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.usecase.auth.GetCurrentIdUseCase
 import com.example.placeslikee.domain.usecase.GetMapMarkUseCase
+import com.example.placeslikee.domain.usecase.RefreshMarkersUseCase
 import com.example.placeslikee.domain.usecase.auth.IsUserLoggedInUseCase
 import com.yandex.mapkit.map.CameraPosition
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -21,10 +23,12 @@ import javax.inject.Inject
 class MapViewModel @Inject constructor(
     private val getMapMarkerUseCase: GetMapMarkUseCase,
     private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
-    private val getCurrentIdUseCase: GetCurrentIdUseCase
+    private val getCurrentIdUseCase: GetCurrentIdUseCase,
+
 ) : ViewModel() {
     private val _mapState = MutableStateFlow(MapState())
     val mapState = _mapState.asStateFlow()
+
 
     //Auxiliary data for camera position change
     private val _isFirstTimeLoading = MutableStateFlow(true)
@@ -37,6 +41,9 @@ class MapViewModel @Inject constructor(
     private val _navigateToAuth = MutableSharedFlow<Unit>()
     val navigateToAuth = _navigateToAuth.asSharedFlow()
 
+    //Checking whether any marker is chosen
+    private val _selectedMarker = MutableStateFlow<UIMarker?>(null)
+    val selectedMarker = _selectedMarker.asStateFlow()
 
     //Create marker navigation
     private val _navigateToCreateMarker = MutableSharedFlow<NewMarkerIfo>()
@@ -65,9 +72,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    //Checking whether any marker is chosen
-    private val _selectedMarker = MutableStateFlow<UIMarker?>(null)
-    val selectedMarker = _selectedMarker.asStateFlow()
 
 
     fun onMapClick(event: MapEvent) {

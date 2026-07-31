@@ -6,12 +6,24 @@ import android.graphics.PointF
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 
 import androidx.compose.runtime.Composable
@@ -23,9 +35,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -60,6 +74,7 @@ fun MapScreen(
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit
 ) {
     val state by viewModel.mapState.collectAsState()
+
     val context = LocalContext.current
     val mapView = MapViewHelper()
     val isFirstTimeLoading by viewModel.isFirstTimeLoading.collectAsState()
@@ -71,6 +86,9 @@ fun MapScreen(
     )
 
     var userLocationLayer by remember { mutableStateOf<UserLocationLayer?>(null) }
+
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val inputListener = remember {
         object : InputListener {
@@ -154,7 +172,6 @@ fun MapScreen(
     }
     LaunchedEffect(Unit) {
         viewModel.navigateToCreateMarker.collect { info ->
-            Log.d("my log", "MapScreen: navigate to Create marker")
             onNavigateToCreateMarker(info)
         }
     }
@@ -169,56 +186,106 @@ fun MapScreen(
             )
         }
     }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(16.dp))
-    ) {
-        AndroidView(
-            factory = {
-                mapView.apply {
-                    val map = mapWindow.map
-                    map.addInputListener(inputListener)
-                    map.addCameraListener(cameraListener)
-                    viewModel.getLatestCameraPosition()?.let { savedPos ->
-                        map.move(savedPos)
 
-                    }
-                }
-            },
-            update = { view ->
-                val hasFineLocation = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
+        Box(
+            modifier = Modifier.fillMaxSize()
+                .clip(RoundedCornerShape(16.dp))
+        ) {
+            AndroidView(
+                factory = {
+                    mapView.apply {
+                        val map = mapWindow.map
+                        map.addInputListener(inputListener)
+                        map.addCameraListener(cameraListener)
+                        viewModel.getLatestCameraPosition()?.let { savedPos ->
+                            map.move(savedPos)
 
-                val hasCoarseLocation = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-
-                if (isLocationGranted && (hasFineLocation || hasCoarseLocation)) {
-                    try {
-                        if (userLocationLayer == null) {
-                            val kit = MapKitFactory.getInstance()
-                            val layer = kit.createUserLocationLayer(view.mapWindow)
-
-                            layer.setObjectListener(userLocationObjectListener)
-                            layer.isVisible = true
-
-                            userLocationLayer = layer
                         }
-
-                    } catch (e: SecurityException) {
-                        Log.e("my log", "MapScreen: ${e.message}")
                     }
-                }
-                userLocationLayer?.isVisible = isLocationGranted
+                },
+                update = { view ->
+                    val hasFineLocation = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
 
-            },
-            modifier = Modifier.fillMaxSize(),
+                    val hasCoarseLocation = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
 
+                    if (isLocationGranted && (hasFineLocation || hasCoarseLocation)) {
+                        try {
+                            if (userLocationLayer == null) {
+                                val kit = MapKitFactory.getInstance()
+                                val layer = kit.createUserLocationLayer(view.mapWindow)
+
+                                layer.setObjectListener(userLocationObjectListener)
+                                layer.isVisible = true
+
+                                userLocationLayer = layer
+                            }
+
+                        } catch (e: SecurityException) {
+                            Log.e("my log", "MapScreen: ${e.message}")
+                        }
+                    }
+                    userLocationLayer?.isVisible = isLocationGranted
+
+                },
+                modifier = Modifier.fillMaxSize(),
+                )
+            FloatingActionButton(
+                onClick = {
+                    if(!isLocationGranted){
+                        launcher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
+                    else{
+                        val targetLocation = userLocationLayer?.cameraPosition()?.target
+
+                        if(targetLocation != null){
+                            mapView.mapWindow.map.move(
+                                CameraPosition(targetLocation, 17.0f, 0.0f, 0.0f),
+                                Animation(Animation.Type.SMOOTH, 1f),
+                                null
+                            )
+                        }
+                        else{
+                            scope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(
+                                    message = "Ишем ваше местоположение...",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
+                shape = MaterialTheme.shapes.medium
+
+            ) {
+                Icon(
+                    painter = painterResource( R.drawable.baseline_my_location_24),
+                    contentDescription = "Моё местоположение"
+                )
+            }
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 80.dp)
 
             )
-    }
+        }
+
     LaunchedEffect(state.points, mapView) {
         val mapObjects = mapView.mapWindow.map.mapObjects
         mapObjects.clear()
