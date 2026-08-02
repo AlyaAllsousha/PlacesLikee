@@ -5,5 +5,6 @@ import androidx.room.PrimaryKey
 data class RemoteUser(
     val id: String = "",
     val name: String = "",
+    val email: String = "",
     val remoteTimestamp: Long = 0L
 )

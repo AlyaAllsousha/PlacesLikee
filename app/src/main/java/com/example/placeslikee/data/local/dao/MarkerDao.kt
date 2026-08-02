@@ -53,7 +53,7 @@ interface MarkerDao {
     @Query("DELETE FROM marks_table")
     suspend fun deleteAllMarkers()
 
-    @Query("SELECT * FROM marks_table WHERE authorId = :userId")
+    @Query("SELECT * FROM marks_table WHERE authorId = :userId AND synced != 'PENDING_DELETE'")
     fun getByUserId(userId: String): Flow<List<MarkerWithAuthor>>
 
     @Query("SELECT * FROM marks_table WHERE synced != 'SYNCED'")

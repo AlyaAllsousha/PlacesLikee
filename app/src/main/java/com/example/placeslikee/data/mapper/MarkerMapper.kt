@@ -67,10 +67,12 @@ fun UIMarker.toMarkerEntity(): MarkerEntity = MarkerEntity(
 fun RemoteUser.toUserEntity(): UserEntity = UserEntity(
     id = id.trim(),
     name = name,
+    email = email,
     localTimestamp = remoteTimestamp
 )
 fun UserEntity.toRemoteUser(): RemoteUser = RemoteUser(
     id = id.trim(),
     name = name,
+    email = email,
     remoteTimestamp = localTimestamp
 )

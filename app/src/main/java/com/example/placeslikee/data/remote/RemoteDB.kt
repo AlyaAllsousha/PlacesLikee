@@ -36,6 +36,7 @@ class RemoteDB @Inject constructor(
     }
 
     suspend fun deleteMarker(mark: RemoteMarker){
+        Log.d("my log", "deleteMarker(RemoteDB): mark.id")
         collectionMarkers.document(mark.id).delete()
     }
 

@@ -22,7 +22,7 @@ import javax.inject.Inject
 class MapRepositoryImpl @Inject constructor(
     private val localDb: LocalDB,
     private val syncScheduler: SyncWorkerScheduler
-) :MapRepository {
+) : MapRepository {
 
     override fun getMarkers(): Flow<List<UIMarker>> {
         syncScheduler.scheduleSingleSync()
@@ -40,8 +40,8 @@ class MapRepositoryImpl @Inject constructor(
     }
 
 
-    override suspend fun deleteMark(marker: UIMarker) {
-        localDb.markersDao().markAsDeleted(marker.id)
+    override suspend fun deleteMark(id: String) {
+        localDb.markersDao().markAsDeleted(id)
         syncScheduler.scheduleSingleSync()
     }
 

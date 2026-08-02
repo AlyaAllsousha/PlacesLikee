@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.placeslikee.domain.repositories.AuthRepository
+import com.example.placeslikee.domain.usecase.auth.LogInUseCase
+import com.example.placeslikee.domain.usecase.auth.RegisterUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,10 +16,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val logInUseCase: LogInUseCase,
+    private val registerUseCase: RegisterUseCase
 ) : ViewModel(){
 
-    private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
     private val _state = MutableStateFlow(AuthScreenState())
     val state = _state.asStateFlow()
 
@@ -38,9 +40,9 @@ class AuthViewModel @Inject constructor(
             _state.update { it.copy(status = AuthUiState.Loading) }
 
             val result = if (currentState.isLoginMode){
-                authRepository.login(currentState.email, currentState.password)
+                logInUseCase(currentState.email, currentState.password)
             } else{
-                authRepository.register(currentState.email, currentState.password, currentState.name)
+                registerUseCase(currentState.email, currentState.password, currentState.name)
             }
             result.onSuccess {
                 _state.update { it.copy(status = AuthUiState.Success) }
@@ -58,10 +60,7 @@ class AuthViewModel @Inject constructor(
                 _state.update { it.copy(status = AuthUiState.Error("Заполните все поля")) }
                 false
             }
-            !EMAIL_REGEX.matches(s.email.trim()) -> {
-                _state.update { it.copy(status = AuthUiState.Error("Некорректный формат email")) }
-                false
-            }
+
             !s.isLoginMode && s.name.isBlank() -> {
                 _state.update { it.copy(status = AuthUiState.Error("Введите имя")) }
                 false
@@ -76,7 +75,8 @@ class AuthViewModel @Inject constructor(
     private fun mapErrorToMessage(e: Throwable): String{
         return when {
             e.message?.contains("password") == true -> "Неверный пароль"
-            e.message?.contains("email") == true -> "Неверный Email"
+            e.message?.contains("email address is already in use") == true -> "Пользователь с такой почтой уже существует"
+            e.message?.contains("email") == true -> "Неверный формат Email"
             e.message?.contains("network") == true -> "Нет интернета"
             e.message?.contains("credential is incorrect") == true -> "Неверные почта или пароль"
             else -> "Ошибка: ${e.localizedMessage}"

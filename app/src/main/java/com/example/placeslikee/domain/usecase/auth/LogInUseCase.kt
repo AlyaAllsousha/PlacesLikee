@@ -3,8 +3,10 @@ package com.example.placeslikee.domain.usecase.auth
 import com.example.placeslikee.domain.repositories.AuthRepository
 import javax.inject.Inject
 
-class LogOutUseCase @Inject constructor(
+class LogInUseCase @Inject  constructor(
     private val repository: AuthRepository
-) {
-    operator fun invoke() = repository.logout()
+){
+    suspend operator fun invoke(email: String, password: String): Result<String>{
+        return repository.login(email, password)
+    }
 }

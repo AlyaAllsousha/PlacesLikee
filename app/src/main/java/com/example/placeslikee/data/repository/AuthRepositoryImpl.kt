@@ -1,6 +1,7 @@
 package com.example.placeslikee.data.repository
 
 import android.util.Log
+import androidx.compose.ui.graphics.RectangleShape
 import com.example.placeslikee.workmanger.MarkersSyncManager
 import com.example.placeslikee.data.local.LocalDB
 import com.example.placeslikee.data.mapper.toUserEntity
@@ -8,12 +9,15 @@ import com.example.placeslikee.data.remote.RemoteDB
 import com.example.placeslikee.data.remote.dto.RemoteUser
 import com.example.placeslikee.domain.repositories.AuthRepository
 import com.example.placeslikee.workmanger.SyncWorkerScheduler
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+
 
 class AuthRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth,
@@ -30,11 +34,11 @@ class AuthRepositoryImpl @Inject constructor(
             val userId = result.user?.uid ?: throw Exception("User not found")
             syncUserData(userId)
             syncScheduler.scheduleSingleSync()
-            Result.success(userId)
+             Result.success(userId)
         }
         catch (e: Exception){
             Log.d("my log", "AuthRepoImpl: Login failed: ${e.message} ")
-            Result.failure(e)
+             Result.failure(e)
         }
     }
 
@@ -49,6 +53,7 @@ class AuthRepositoryImpl @Inject constructor(
             val newUser = RemoteUser(
                 id = userId,
                 name = name,
+                email = email,
                 remoteTimestamp = System.currentTimeMillis()
             )
             remoteDB.saveUser(newUser)
@@ -83,6 +88,40 @@ class AuthRepositoryImpl @Inject constructor(
         return auth.currentUser != null
     }
 
+    override suspend  fun changeUserInfo(id: String, name: String) {
+        val currUser = localDB.usersDao().getUserById(id)
+        localDB.usersDao().createUser(currUser!!.copy(name = name))
+        syncScheduler.scheduleSingleSync()
+    }
+
+    override suspend fun changeUserEmail(email: String, password: String):Result<String> {
+        val user = auth.currentUser
+        if (user != null && user.email != null) {
+            val remoteUser = remoteDB.getUserById(user.uid)
+            if (remoteUser != null) {
+                return try {
+                    user.verifyBeforeUpdateEmail(email).await()
+                    remoteDB.saveUser(remoteUser)
+                    Result.success(email)
+                } catch (e: Exception) {
+                    if (e is FirebaseAuthRecentLoginRequiredException) {
+                        try {
+                            val credential = EmailAuthProvider.getCredential(user.email!!, password)
+                            user.reauthenticate(credential).await()
+                            user.verifyBeforeUpdateEmail(email).await()
+                            Result.success(email)
+                        } catch (reAuthException: Exception) {
+                            Result.failure(reAuthException)
+                        }
+                    }
+                    Result.failure(e)
+                }
+            }
+        }
+        return Result.failure(NotAuthorizedException())
+        syncScheduler.scheduleSingleSync()
+    }
+
     override fun logout() {
         auth.signOut()
     }
@@ -100,3 +139,4 @@ class AuthRepositoryImpl @Inject constructor(
 
     }
 }
+class NotAuthorizedException : Exception("The user is not found")

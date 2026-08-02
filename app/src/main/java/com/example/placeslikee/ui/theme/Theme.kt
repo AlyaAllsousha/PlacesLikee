@@ -41,7 +41,7 @@ private val LightColorScheme = lightColorScheme(
     errorContainer = ErrorLight.copy(alpha = 0.12f),
     onErrorContainer = ErrorLight,
 
-    outline = DividerLight,
+    outline = TextMediumEmphasisLight,
     outlineVariant = DividerLight.copy(alpha = 0.5f)
 )
 val Shapes = Shapes(
@@ -52,12 +52,12 @@ val Shapes = Shapes(
     extraLarge = RoundedCornerShape(32.dp)
 )
 private val DarkColorScheme = darkColorScheme(
-    primary = EmeraldGreenLight,           // Светлый изумруд для кнопок в темной теме
-    onPrimary = NightBackground,           // Текст на кнопке - черный
+    primary = EmeraldGreenLight,
+    onPrimary = NightBackground,
     primaryContainer = EmeraldGreenLight.copy(alpha = 0.20f),
     onPrimaryContainer = EmeraldGreenLight,
 
-    secondary = TerracottaLight,           // Яркий терракотта для лайков
+    secondary = TerracottaLight,
     onSecondary = NightBackground,
     secondaryContainer = TerracottaLight.copy(alpha = 0.20f),
     onSecondaryContainer = TerracottaLight,
@@ -65,10 +65,10 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = EmeraldGreenLight.copy(alpha = 0.8f),
     onTertiary = NightBackground,
 
-    background = NightBackground,          // Фон ленты - полуночный черный
+    background = NightBackground,
     onBackground = TextHighEmphasisDark,
 
-    surface = NightSurface,                // Карточки постов - темный сланец
+    surface = NightSurface,
     onSurface = TextHighEmphasisDark,
     surfaceVariant = NightBackground,
     onSurfaceVariant = TextMediumEmphasisDark,
@@ -78,7 +78,7 @@ private val DarkColorScheme = darkColorScheme(
     errorContainer = ErrorDark.copy(alpha = 0.20f),
     onErrorContainer = ErrorDark,
 
-    outline = DividerDark,
+    outline = TextMediumEmphasisDark,
     outlineVariant = DividerDark.copy(alpha = 0.5f)
 )
 

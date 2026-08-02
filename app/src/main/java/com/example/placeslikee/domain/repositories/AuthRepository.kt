@@ -9,5 +9,7 @@ interface AuthRepository {
     fun getCurrentUserIdFlow(): Flow<String?>
     fun getCurrentUserEmail(): String?
     fun isUserLoggedIn(): Boolean
+    suspend fun changeUserInfo(id: String, name: String)
+    suspend fun changeUserEmail(email: String, password: String):Result<String>
     fun logout()
 }

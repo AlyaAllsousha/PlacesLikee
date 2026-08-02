@@ -77,7 +77,7 @@ fun MarkerDetailsContent(marker: UIMarker) {
         Text(
             text = marker.description ?: "Без комментариев...",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(16.dp))
         Row (

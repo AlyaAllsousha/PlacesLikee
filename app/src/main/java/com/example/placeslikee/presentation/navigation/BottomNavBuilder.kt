@@ -39,13 +39,14 @@ import kotlinx.coroutines.time.delay
 
 @Composable
 fun NavHostContainer(
-    navController: NavHostController,
-    padding: PaddingValues
+    navController: NavHostController, padding: PaddingValues
 ) {
     NavHost(
         navController = navController,
         startDestination = NavRoutes.Main.routes,
-        modifier = Modifier.padding(paddingValues = padding).consumeWindowInsets(padding),
+        modifier = Modifier
+            .padding(paddingValues = padding)
+            .consumeWindowInsets(padding),
         enterTransition = {
             fadeIn(animationSpec = tween(250))
         },
@@ -62,87 +63,74 @@ fun NavHostContainer(
             composable(
                 route = NavRoutes.Main.routes
             ) {
-                MainScreen(
-                    onNavigateToAuth = {
-                        navController.navigate(NavRoutes.Auth.routes)
-                    },
-                    onNavigateToProfile = {
-                        navController.navigate(NavRoutes.Profile.routes)
-                    },
-                    onNavigateToCreateMarker = {info ->
-                        navController.navigate("${NavRoutes.CreateMark.routes}/${info.lat}/${info.lon}")
-                    }
-                )
+                MainScreen(onNavigateToAuth = {
+                    navController.navigate(NavRoutes.Auth.routes)
+                }, onNavigateToProfile = {
+                    navController.navigate(NavRoutes.Profile.routes)
+                }, onNavigateToCreateMarker = { info ->
+                    navController.navigate("${NavRoutes.CreateMark.routes}/${info.lat}/${info.lon}")
+                })
             }
-            composable(NavRoutes.Auth.routes){
+            composable(NavRoutes.Auth.routes) {
                 AuthScreen(
                     onNavigateToMap = {
-                        navController.popBackStack()
-                    }
-                )
+                        navController.navigate(NavRoutes.Main.routes)
+                    })
             }
             composable(NavRoutes.Profile.routes) {
-                ProfileScreen()
+                ProfileScreen(
+                    onNavigateToAuth = { navController.navigate(NavRoutes.Auth.routes) })
             }
-            composable(NavRoutes.List.routes){
+            composable(NavRoutes.List.routes) {
                 ListScreen()
             }
             composable(
                 route = "${NavRoutes.CreateMark.routes}/{lat}/{lon}",
                 arguments = listOf(
-                    navArgument("lat"){type = NavType.StringType},
-                    navArgument("lon"){type = NavType.StringType}
-                )
+                    navArgument("lat") { type = NavType.StringType },
+                    navArgument("lon") { type = NavType.StringType })
             ) {
                 CreateMarkerScreen(
                     onNavigateBack = {
                         navController.popBackStack()
-                    }
-                )
+                    })
             }
-        }
-    )
+        })
 }
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
-    NavigationBar (
+    NavigationBar(
         containerColor = MaterialTheme.colorScheme.background
-    ){
+    ) {
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
         val scope = rememberCoroutineScope()
         Constants.BottomNavItems.forEach { navItem ->
-                NavigationBarItem(
-                    selected = currentRoute == navItem.route,
-                    onClick = {
-                        if(navItem.route == NavRoutes.Main.routes){
-                            navController.popBackStack()
-                        }
+            NavigationBarItem(
+                selected = currentRoute == navItem.route, onClick = {
+                    if (navItem.route == NavRoutes.Main.routes) {
+                        navController.popBackStack()
+                    }
 
-                        navController.navigate(navItem.route){
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
+                    navController.navigate(navItem.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
                         }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = navItem.icon,
-                            contentDescription = navItem.label
-                        )
-                    },
-                    label = {
-                        Text(text = navItem.label)
-                    },
-                    alwaysShowLabel = false,
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }, icon = {
+                    Icon(
+                        imageVector = navItem.icon, contentDescription = navItem.label
                     )
+                }, label = {
+                    Text(text = navItem.label)
+                }, alwaysShowLabel = false, colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                 )
+            )
 
         }
 

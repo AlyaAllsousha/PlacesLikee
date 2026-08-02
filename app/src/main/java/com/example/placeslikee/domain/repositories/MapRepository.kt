@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 interface MapRepository {
     fun getMarkers(): Flow<List<UIMarker>>
     suspend fun addMarkers(newMarker: MarkerEntity)
-    suspend fun deleteMark(marker: UIMarker)
+    suspend fun deleteMark(id: String)
     suspend fun getMarkersByUserId(userId: String):Flow<List<UIMarker>>
     suspend fun refresh()
 }
