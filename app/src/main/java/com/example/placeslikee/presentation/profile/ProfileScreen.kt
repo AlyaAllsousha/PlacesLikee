@@ -1,5 +1,6 @@
 package com.example.placeslikee.presentation.profile
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import com.example.placeslikee.R
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -61,6 +63,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.placeslikee.domain.models.UIMarker
+import com.google.android.gms.tasks.Tasks.await
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
@@ -71,60 +76,64 @@ fun ProfileScreen(
     val isEmailChanging by viewModel.isEmailChanging.collectAsState()
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showEditEmailDialog by remember { mutableStateOf(false) }
+    var emailDialogServerError by remember { mutableStateOf<String?>(null) }
+
     val snackbarHostState = remember { SnackbarHostState() }
 
+
     LaunchedEffect(Unit) {
-        viewModel.uiEvent.collect { message->
-            if(message.isSuccess) {
-                snackbarHostState.showSnackbar(message.toString() )
-                showEditNameDialog = false
-            }
-            else{
-                snackbarHostState.showSnackbar(message.toString() ?: "Ошибка")
+        viewModel.uiEvent.collect { message ->
+            if (message.isSuccess) {
+                showEditEmailDialog = false
+                launch {
+                    snackbarHostState.showSnackbar("Письмо с подтверждением отправлено на новую почту!")
+                }
+            } else {
+                emailDialogServerError =  viewModel.mapErrorToMessage(message.exceptionOrNull()?.message)
             }
         }
     }
     LaunchedEffect(state) {
         if (state is ProfileState.Unauthorized) {
-            onNavigateToAuth
+            onNavigateToAuth()
         }
     }
-    Scaffold(
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+    when (state) {
+        ProfileState.Idle -> {}
+        ProfileState.Unauthorized -> {}
+
+        ProfileState.Loading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Профиль",
-                    style = MaterialTheme.typography.headlineLarge
+                CircularProgressIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
+            }
+        }
 
-            }
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { paddingValues ->
-        when (state) {
-            ProfileState.Idle -> {}
-            ProfileState.Unauthorized -> {
-                onNavigateToAuth()
-            }
-            ProfileState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                }
-            }
+        is ProfileState.Success -> {
+            Scaffold(
+                topBar = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Профиль",
+                            style = MaterialTheme.typography.headlineLarge
+                        )
 
-            is ProfileState.Success -> {
+                    }
+                },
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+            ) { paddingValues ->
                 val markers = (state as ProfileState.Success).markersList
                 val user = (state as ProfileState.Success).user
                 LazyColumn(
@@ -204,9 +213,16 @@ fun ProfileScreen(
                 if (showEditEmailDialog) {
                     EditEmailDialog(
                         currentEmail = user.email,
-                        onDismiss = { showEditEmailDialog = false },
+                        onDismiss = {
+                            showEditEmailDialog = false
+                            emailDialogServerError = null },
                         isLoading = isEmailChanging,
+                        serverError = emailDialogServerError,
+                        onClearError = {
+                            emailDialogServerError = null
+                        },
                         onConfirm = { newEmail, password ->
+                            emailDialogServerError = null
                             viewModel.onChangeEmail(newEmail, password)
                         }
                     )
@@ -214,150 +230,10 @@ fun ProfileScreen(
             }
 
         }
+
     }
 }
 
-@Composable
-fun MarkerItem(
-    marker: UIMarker,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
-) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 2.dp
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.LocationOn,
-                        contentDescription = "Маркер",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-
-                Text(
-                    text = marker.name.takeIf { it.isNotBlank() } ?: "Без названия",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = marker.description?.takeIf { it.isNotBlank() } ?: "Нет описания",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Text(
-                    text = "lat: ${"%.4f".format(marker.lat)}, lon: ${"%.4f".format(marker.longitude)}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
-                )
-
-                Row {
-                    IconButton(
-                        onClick = onEditClick,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Edit,
-                            contentDescription = "Редактировать",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = { showDeleteDialog = true },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Delete,
-                            contentDescription = "Удалить",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            icon = {
-                Icon(Icons.Rounded.Delete, contentDescription = null)
-            },
-            title = { Text("Удалить маркер?") },
-            text = { Text("Вы уверены, что хотите удалить маркер «${marker.name}»? Это действие нельзя отменить.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        onDeleteClick()
-                    }
-                ) {
-                    Text("Удалить", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Отмена")
-                }
-            }
-        )
-    }
-}
 
 @Composable
 fun EmptyMarkersPlaceholder() {
@@ -392,118 +268,7 @@ fun EmptyMarkersPlaceholder() {
     }
 }
 
-@Composable
-fun UserInfoCard(
-    name: String,
-    email: String,
-    onEditNameClick: () -> Unit,
-    onEditEmailClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 24.dp, bottom = 8.dp)
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = name.take(1).uppercase(),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
 
-            UserInfoRow(
-                label = "Имя",
-                value = name,
-                icon = Icons.Rounded.Person,
-                onEditClick = onEditNameClick
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            UserInfoRow(
-                label = "Email",
-                value = email,
-                icon = Icons.Rounded.Email,
-                onEditClick = onEditEmailClick
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    }
-}
-
-@Composable
-private fun UserInfoRow(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    onEditClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surface),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.outline
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        IconButton(onClick = onEditClick) {
-            Icon(
-                imageVector = Icons.Rounded.Edit,
-                contentDescription = "Изменить $label",
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
 
 

@@ -13,10 +13,15 @@ import com.example.placeslikee.data.mapper.toRemoteUser
 import com.example.placeslikee.data.mapper.toUserEntity
 import com.example.placeslikee.data.remote.RemoteDB
 import com.example.placeslikee.data.remote.dto.RemoteMarker
+import com.example.placeslikee.domain.repositories.AuthRepository
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import javax.inject.Inject
 import kotlin.collections.iterator
 
 class MarkersSyncManager @Inject constructor(
+    private val auth: FirebaseAuth,
+    private val authRepository: AuthRepository,
     private val localDB: LocalDB,
     private val remoteDB: RemoteDB,
     private val connectivityManager: ConnectivityManager
@@ -80,9 +85,19 @@ class MarkersSyncManager @Inject constructor(
             }
             markersDao.markAsSynced(marker.id)
         }
+
+        val currUserId = auth.uid
+        if(currUserId != null){
+            val currUser = userDao.getUserById(currUserId)
+            val remoteUser = remoteDB.getUserById(currUserId)
+            if(currUser != null && ((remoteUser?.remoteTimestamp ?: 0L) < currUser.localTimestamp))
+                remoteDB.saveUser(currUser.toRemoteUser())
+        }
+
     }
     private suspend fun pullRemoteChanges(markerDao: MarkerDao, userDao: UsersDao, remoteMarker:  Map<String, RemoteMarker>){
         val remoteUsers = remoteDB.getAllUsers()
+        authRepository.syncAuthData()
         for (user in remoteUsers) {
             val existingUser = userDao.getUserById(user.id)
             if (existingUser == null || existingUser.localTimestamp < user.remoteTimestamp)

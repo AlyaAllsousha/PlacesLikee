@@ -1,5 +1,6 @@
 package com.example.placeslikee.presentation.profile
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.placeslikee.domain.usecase.profile.GetUsersMarkerUseCase
@@ -7,6 +8,7 @@ import com.example.placeslikee.domain.usecase.auth.IsUserLoggedInUseCase
 import com.example.placeslikee.domain.usecase.auth.getCurrentUserUseCase
 import com.example.placeslikee.domain.usecase.profile.ChangeUserEmailUseCase
 import com.example.placeslikee.domain.usecase.profile.DeleteMarkerUseCase
+import com.example.placeslikee.domain.usecase.profile.SyncAuthDataUseCase
 import com.example.placeslikee.domain.usecase.profile.changeUserNameUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -24,7 +26,8 @@ class ProfileViewModel @Inject constructor(
     private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
     private val getCurrentUserUseCase: getCurrentUserUseCase,
     private val deleteMarkerUseCase: DeleteMarkerUseCase,
-    private val changeUserEmailUseCase: ChangeUserEmailUseCase
+    private val changeUserEmailUseCase: ChangeUserEmailUseCase,
+    private val syncAuthDataUseCase: SyncAuthDataUseCase
 ): ViewModel() {
     private val _state = MutableStateFlow<ProfileState>(ProfileState.Idle)
     val state = _state.asStateFlow()
@@ -37,6 +40,9 @@ class ProfileViewModel @Inject constructor(
 
     init{
         loadMarkers()
+        viewModelScope.launch {
+            syncAuthDataUseCase()
+        }
     }
     private fun loadMarkers(){
         if(isUserLoggedInUseCase()) {
@@ -72,15 +78,52 @@ class ProfileViewModel @Inject constructor(
     }
     fun onChangeEmail(email: String, password: String){
         viewModelScope.launch {
-            _isEmailChanging.value = true
-            val result  = changeUserEmailUseCase(email, password)
-            _uiEvent.send(result)
-            _isEmailChanging.value = false
+            try {
+                _isEmailChanging.value = true
+                val result = changeUserEmailUseCase(email, password)
+                _uiEvent.send(result)
+            }
+            finally {
+                _isEmailChanging.value = false
+
+            }
+
         }
     }
     fun  deleteMarker(id: String){
         viewModelScope.launch {
             deleteMarkerUseCase(id)
+        }
+    }
+    fun mapErrorToMessage(errorMsg: String?): String {
+        Log.d("my log", "mapErrorToMessage: $errorMsg")
+        when {
+            (errorMsg == null) -> {
+                return "Не удалось изменить почту"
+            }
+
+            ( errorMsg.contains("credential is incorrect", ignoreCase = true)) -> {
+                return "Неверный пароль"
+            }
+
+            (errorMsg.contains("network", ignoreCase = true)) -> {
+                return "Нет подключения к интернету"
+            }
+
+            (errorMsg.contains("email address is already", ignoreCase = true)) ->{
+                return "Этот email уже используется"
+            }
+            (errorMsg.contains("email", ignoreCase = true) || errorMsg.contains(
+                "invalid",
+                ignoreCase = true
+            )) -> {
+                return "Неверный формат почты"
+            }
+
+            else -> {
+                return errorMsg
+            }
+
         }
     }
 }

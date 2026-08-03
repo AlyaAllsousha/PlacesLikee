@@ -19,6 +19,9 @@ fun EditNameDialog(
     onConfirm: (String) -> Unit
 ) {
     var newName by remember { mutableStateOf(currentName) }
+    val isNameChanged = newName.trim() != currentName
+    val isNameValid = newName.trim().length >= 2
+    val isError = newName.isNotEmpty() && !isNameValid
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -28,6 +31,12 @@ fun EditNameDialog(
                 value = newName,
                 onValueChange = { newName = it },
                 label = { Text("Новое имя") },
+                isError = isError,
+                supportingText = {
+                    if (isError) {
+                        Text("Имя должно содержать не менее 2 символов")
+                    }
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -35,7 +44,7 @@ fun EditNameDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(newName.trim()) },
-                enabled = newName.isNotBlank() && newName != currentName
+                enabled = newName.isNotBlank() && isNameChanged
             ) {
                 Text("Сохранить")
             }

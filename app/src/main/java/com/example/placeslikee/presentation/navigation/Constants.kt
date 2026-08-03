@@ -2,6 +2,7 @@ package com.example.placeslikee.presentation.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
@@ -20,9 +21,9 @@ object Constants {
             route = "main"
         ),
         BottomNavItem(
-            label = "Список",
-            icon = Icons.AutoMirrored.Filled.List,
-            route = "list"
+            label = "Избранное",
+            icon = Icons.Filled.Favorite,
+            route = "favourite"
         )
     )
 }
