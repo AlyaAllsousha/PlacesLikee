@@ -2,10 +2,13 @@ package com.example.placeslikee.data.remote
 
 import android.util.Log
 import androidx.compose.runtime.currentComposer
+import com.example.placeslikee.data.local.entities.LikesEntity
 import com.example.placeslikee.data.local.entities.UserEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
+import com.example.placeslikee.data.remote.dto.RemoteLike
 import com.example.placeslikee.data.remote.dto.RemoteMarker
 import com.example.placeslikee.data.remote.dto.RemoteUser
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.tasks.await
@@ -16,7 +19,7 @@ class RemoteDB @Inject constructor(
 ) {
     private val collectionMarkers = firestore.collection("marker")
     private val collectionUsers = firestore.collection("users")
-
+    private val collectionLikes = firestore.collection("likes")
 
     suspend fun getAllMarkers(): List<RemoteMarker> {
         return try {
@@ -35,9 +38,20 @@ class RemoteDB @Inject constructor(
         collectionMarkers.document(mark.id).set(mark).await()
     }
 
-    suspend fun deleteMarker(mark: RemoteMarker){
-        Log.d("my log", "deleteMarker(RemoteDB): mark.id")
+    fun deleteMarker(mark: RemoteMarker) {
         collectionMarkers.document(mark.id).delete()
+    }
+
+    suspend fun updateLikesAmount(markerId: String, isLiked: Boolean){
+        val incrementValue = if (isLiked) 1L else -1L
+        try{
+            collectionMarkers.document(markerId)
+                .update("likesAmount", FieldValue.increment(incrementValue))
+                .await()
+        }
+        catch (e: Exception){
+            Log.e("my log", "updateLikesAmount: Likes amount update error: $e" )
+        }
     }
 
     suspend fun getAllUsers(): List<RemoteUser> {
@@ -52,14 +66,13 @@ class RemoteDB @Inject constructor(
         }
     }
 
-    suspend fun getUserById(userId: String): RemoteUser?{
+    suspend fun getUserById(userId: String): RemoteUser? {
         return try {
             collectionUsers.document(userId)
                 .get()
                 .await()
                 .toObject(RemoteUser::class.java)
-        }
-        catch (e: Exception){
+        } catch (e: Exception) {
             Log.e("my log", "getUserById: ${e.message}", e)
             null
         }
@@ -68,4 +81,40 @@ class RemoteDB @Inject constructor(
     suspend fun saveUser(user: RemoteUser) {
         collectionUsers.document(user.id).set(user).await()
     }
+
+    suspend fun getLikesByUserId(userId: String): List<RemoteLike> {
+        return try {
+            val snapshot = collectionLikes
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+            snapshot.documents.mapNotNull { doc ->
+                doc.toObject(RemoteLike::class.java)
+            }
+        } catch (e: Exception) {
+            Log.e("my log", "getLikesByUserId: error: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getLikeById(likeId: String): RemoteLike?{
+        return try {
+            collectionLikes.document(likeId)
+                .get()
+                .await()
+                .toObject(RemoteLike::class.java)
+        } catch (e: Exception) {
+            Log.e("my log", "getUserById: ${e.message}", e)
+            null
+        }
+    }
+
+    suspend fun saveLike(like: RemoteLike) {
+        collectionLikes.document(like.id).set(like).await()
+    }
+
+    fun deleteLike(like: RemoteLike) {
+        collectionLikes.document(like.id).delete()
+    }
+
 }

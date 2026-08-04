@@ -1,7 +1,7 @@
 package com.example.placeslikee.data.local
 
 import androidx.room.TypeConverter
-import com.example.placeslikee.data.local.entities.marks.SyncState
+import com.example.placeslikee.data.local.entities.SyncState
 
 class MyTypeConverters {
     @TypeConverter

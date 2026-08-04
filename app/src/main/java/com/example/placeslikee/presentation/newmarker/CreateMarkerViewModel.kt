@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.placeslikee.domain.usecase.CreateMarkerUseCase
+import com.example.placeslikee.domain.usecase.markermap.CreateMarkerUseCase
 import com.example.placeslikee.domain.usecase.auth.GetCurrentIdUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow

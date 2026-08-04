@@ -6,5 +6,5 @@ import javax.inject.Inject
 class LogOutUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
-    operator fun invoke() = repository.logout()
+    suspend operator fun invoke() = repository.logout()
 }

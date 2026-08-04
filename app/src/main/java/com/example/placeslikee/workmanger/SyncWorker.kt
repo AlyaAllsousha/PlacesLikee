@@ -20,7 +20,7 @@ class SyncWorker @AssistedInject constructor(
             Result.success()
         }
         catch (e: Exception){
-            Log.d("my log", "doWork: $e")
+            Log.e("my log", "doWork: $e")
             if(runAttemptCount < 3){
                 Result.retry()
             }

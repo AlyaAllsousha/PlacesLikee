@@ -91,8 +91,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun changeUserInfo(id: String, name: String) {
         val currUser = localDB.usersDao().getUserById(id)
-        localDB.usersDao().createUser(currUser!!.copy(name = name))
-        Log.d("my log", "changeUserInfo: id = $id")
+        localDB.usersDao().createUser(currUser!!.copy(name = name, localTimestamp = System.currentTimeMillis()))
         syncScheduler.scheduleSingleSync()
     }
 
@@ -112,11 +111,13 @@ class AuthRepositoryImpl @Inject constructor(
             Result.success(email)
         }
          catch (e: Exception) {
+             Log.e("my log", "changeUserEmail: ${e.message}", e)
             Result.failure(e)
         }
     }
 
-    override fun logout() {
+     override suspend fun logout() {
+        localDB.likesDao().deleteAllLikes()
         auth.signOut()
     }
 

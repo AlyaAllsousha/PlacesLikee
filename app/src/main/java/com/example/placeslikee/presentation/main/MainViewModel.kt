@@ -7,7 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.placeslikee.data.local.entities.UserEntity
-import com.example.placeslikee.domain.usecase.RefreshMarkersUseCase
+import com.example.placeslikee.domain.usecase.markermap.RefreshMarkersUseCase
 import com.example.placeslikee.domain.usecase.auth.LogOutUseCase
 import com.example.placeslikee.domain.usecase.auth.getCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel

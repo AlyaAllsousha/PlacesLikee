@@ -70,7 +70,7 @@ import kotlinx.coroutines.launch
 fun MapScreen(
     viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
     onNavigateToAuth: () -> Unit,
-    onNavigateToCreateMarker: (NewMarkerIfo) -> Unit
+    onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
 ) {
     val state by viewModel.mapState.collectAsState()
 
@@ -324,7 +324,7 @@ fun MapScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            MarkerDetailsContent(marker)
+            MarkerDetailsContent(markerId = marker.id)
         }
     }
     DisposableEffect(Unit) {

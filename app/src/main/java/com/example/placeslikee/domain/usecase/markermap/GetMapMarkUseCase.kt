@@ -1,4 +1,4 @@
-package com.example.placeslikee.domain.usecase
+package com.example.placeslikee.domain.usecase.markermap
 
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.repositories.MapRepository

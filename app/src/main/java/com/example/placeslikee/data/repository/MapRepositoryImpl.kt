@@ -1,27 +1,21 @@
 package com.example.placeslikee.data.repository
 
 import android.util.Log
-import com.example.placeslikee.workmanger.MarkersSyncManager
 import com.example.placeslikee.data.local.LocalDB
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
-import com.example.placeslikee.data.mapper.toMarkerEntity
+import com.example.placeslikee.data.local.entities.marks.MarkerWithAuthor
 import com.example.placeslikee.data.mapper.toUIMarker
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.repositories.MapRepository
 import com.example.placeslikee.workmanger.SyncWorkerScheduler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
 class MapRepositoryImpl @Inject constructor(
     private val localDb: LocalDB,
-    private val syncScheduler: SyncWorkerScheduler
+    private val syncScheduler: SyncWorkerScheduler,
 ) : MapRepository {
 
     override fun getMarkers(): Flow<List<UIMarker>> {
@@ -45,6 +39,13 @@ class MapRepositoryImpl @Inject constructor(
         syncScheduler.scheduleSingleSync()
     }
 
+    override fun getMarkerById(markerId: String): Flow<UIMarker?> {
+        syncScheduler.scheduleSingleSync()
+        return localDb.markersDao().getById(markerId).map{
+            it?.toUIMarker()
+        }
+    }
+
     override suspend fun getMarkersByUserId(userId: String): Flow<List<UIMarker>> {
         syncScheduler.scheduleSingleSync()
         return localDb.markersDao().getByUserId(userId).map {
@@ -53,6 +54,8 @@ class MapRepositoryImpl @Inject constructor(
             }
         }
     }
+
+
 
     override suspend fun refresh() {
         syncScheduler.scheduleSingleSync()

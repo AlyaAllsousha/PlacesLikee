@@ -1,15 +1,15 @@
 package com.example.placeslikee.data.mapper
 
-import android.util.Log
+import com.example.placeslikee.data.local.entities.LikesEntity
 import com.example.placeslikee.data.local.entities.UserEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerWithAuthor
-import com.example.placeslikee.data.local.entities.marks.SyncState
+import com.example.placeslikee.data.local.entities.SyncState
+import com.example.placeslikee.data.remote.dto.RemoteLike
 import com.example.placeslikee.data.remote.dto.RemoteMarker
 import com.example.placeslikee.data.remote.dto.RemoteUser
 import com.example.placeslikee.domain.models.UIMarker
 import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.auth.User
 
 fun MarkerEntity.toRemoteMarker(): RemoteMarker = RemoteMarker(
     id = id.trim(),
@@ -44,6 +44,7 @@ fun MarkerWithAuthor.toUIMarker(): UIMarker {
         authorId = mark.authorId ?: "",
         authorName = author?.name ?: "Неизвестный",
         description = mark.description,
+        likedByUser = mark.likedByUser,
         likesAmount = mark.likesAmount,
         image = mark.image,
         uiTimestamp = mark.localTimestamp
@@ -75,4 +76,19 @@ fun UserEntity.toRemoteUser(): RemoteUser = RemoteUser(
     name = name,
     email = email,
     remoteTimestamp = localTimestamp
+)
+
+fun LikesEntity.toRemoteLike(): RemoteLike = RemoteLike(
+    id = id,
+    markerId = markerId,
+    userId = userId,
+    remoteTimestamp = localTimeStamp
+)
+
+fun RemoteLike.toLikeEntity(): LikesEntity = LikesEntity(
+    id = id,
+    markerId = markerId,
+    userId = userId,
+    syncState = SyncState.SYNCED,
+    localTimeStamp = remoteTimestamp ?: System.currentTimeMillis()
 )

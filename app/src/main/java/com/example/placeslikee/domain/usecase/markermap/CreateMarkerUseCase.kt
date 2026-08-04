@@ -1,7 +1,6 @@
-package com.example.placeslikee.domain.usecase
+package com.example.placeslikee.domain.usecase.markermap
 
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
-import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.repositories.MapRepository
 import java.util.UUID
 import javax.inject.Inject

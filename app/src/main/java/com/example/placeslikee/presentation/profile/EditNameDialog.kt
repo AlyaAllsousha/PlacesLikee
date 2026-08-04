@@ -44,7 +44,7 @@ fun EditNameDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(newName.trim()) },
-                enabled = newName.isNotBlank() && isNameChanged
+                enabled = newName.isNotBlank() && isNameChanged && !isError
             ) {
                 Text("Сохранить")
             }

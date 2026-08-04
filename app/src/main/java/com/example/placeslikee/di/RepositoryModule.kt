@@ -1,8 +1,10 @@
 package com.example.placeslikee.di
 
 import com.example.placeslikee.data.repository.AuthRepositoryImpl
+import com.example.placeslikee.data.repository.LikeRepositoryImpl
 import com.example.placeslikee.data.repository.MapRepositoryImpl
 import com.example.placeslikee.domain.repositories.AuthRepository
+import com.example.placeslikee.domain.repositories.LikeRepository
 import com.example.placeslikee.domain.repositories.MapRepository
 import dagger.Binds
 import dagger.Module
@@ -21,4 +23,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLikeRepository(impl: LikeRepositoryImpl): LikeRepository
 }

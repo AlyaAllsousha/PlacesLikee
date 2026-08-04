@@ -1,3 +1,5 @@
+// Theme.kt
+
 package com.example.placeslikee.ui.theme
 
 import android.app.Activity
@@ -15,71 +17,87 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = EmeraldGreen,
+    // ── Primary: тёплый янтарь ──────────────────────────────────────────────
+    primary = Amber,
     onPrimary = Color.White,
-    primaryContainer = EmeraldGreen.copy(alpha = 0.12f),
-    onPrimaryContainer = EmeraldGreen,
+    primaryContainer = Amber.copy(alpha = 0.15f),
+    onPrimaryContainer = Color(0xFF4A2800),     // тёмно-коричневый для читаемости
 
+    // ── Secondary: терракота ─────────────────────────────────────────────────
     secondary = Terracotta,
     onSecondary = Color.White,
     secondaryContainer = Terracotta.copy(alpha = 0.12f),
-    onSecondaryContainer = Terracotta,
+    onSecondaryContainer = Color(0xFF3D0A00),
 
-    tertiary = EmeraldGreen.copy(alpha = 0.8f),
+    // ── Tertiary: тёплая охра (дополнительный акцент) ────────────────────────
+    tertiary = Color(0xFFB5803A),
     onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFB5803A).copy(alpha = 0.12f),
+    onTertiaryContainer = Color(0xFF3A2000),
 
-    background = WarmPaper,
+    // ── Фон и поверхности ────────────────────────────────────────────────────
+    background = Parchment,
     onBackground = TextHighEmphasisLight,
 
-    surface = Color.White,  // Карточки постов - чистый белый
+    surface = Color.White,
     onSurface = TextHighEmphasisLight,
-    surfaceVariant = WarmPaper,
+    surfaceVariant = Color(0xFFF2EAE0),         // тёплый бежевый для вариантов
     onSurfaceVariant = TextMediumEmphasisLight,
 
+    // ── Ошибки и границы ─────────────────────────────────────────────────────
     error = ErrorLight,
     onError = Color.White,
     errorContainer = ErrorLight.copy(alpha = 0.12f),
     onErrorContainer = ErrorLight,
 
     outline = TextMediumEmphasisLight,
-    outlineVariant = DividerLight.copy(alpha = 0.5f)
+    outlineVariant = DividerLight
 )
+
+private val DarkColorScheme = darkColorScheme(
+    // ── Primary: янтарь (немного теплее для тёмного фона) ───────────────────
+    primary = AmberLight,
+    onPrimary = Color(0xFF2E1500),
+    primaryContainer = Color(0xFF4A2800),
+    onPrimaryContainer = Color(0xFFFFD9A8),     // кремово-оранжевый
+
+    // ── Secondary: мягкая терракота ──────────────────────────────────────────
+    secondary = TerracottaLight,
+    onSecondary = Color(0xFF2B0A00),
+    secondaryContainer = Color(0xFF4A1800),
+    onSecondaryContainer = Color(0xFFFFB4A0),
+
+    // ── Tertiary ─────────────────────────────────────────────────────────────
+    tertiary = Color(0xFFC99050),
+    onTertiary = Color(0xFF2E1800),
+    tertiaryContainer = Color(0xFF452C00),
+    onTertiaryContainer = Color(0xFFFFDDB0),
+
+    // ── Фон и поверхности ────────────────────────────────────────────────────
+    background = NightBackground,
+    onBackground = TextHighEmphasisDark,
+
+    surface = NightSurface,
+    onSurface = TextHighEmphasisDark,
+    surfaceVariant = NightSurfaceVariant,
+    onSurfaceVariant = TextMediumEmphasisDark,
+
+    // ── Ошибки и границы ─────────────────────────────────────────────────────
+    error = ErrorDark,
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+
+    outline = TextMediumEmphasisDark,
+    outlineVariant = DividerDark
+)
+
 val Shapes = Shapes(
     extraSmall = RoundedCornerShape(4.dp),
     small = RoundedCornerShape(12.dp),
     medium = RoundedCornerShape(16.dp),
     large = RoundedCornerShape(24.dp),
     extraLarge = RoundedCornerShape(32.dp)
-)
-private val DarkColorScheme = darkColorScheme(
-    primary = EmeraldGreenLight,
-    onPrimary = NightBackground,
-    primaryContainer = EmeraldGreenLight.copy(alpha = 0.20f),
-    onPrimaryContainer = EmeraldGreenLight,
-
-    secondary = TerracottaLight,
-    onSecondary = NightBackground,
-    secondaryContainer = TerracottaLight.copy(alpha = 0.20f),
-    onSecondaryContainer = TerracottaLight,
-
-    tertiary = EmeraldGreenLight.copy(alpha = 0.8f),
-    onTertiary = NightBackground,
-
-    background = NightBackground,
-    onBackground = TextHighEmphasisDark,
-
-    surface = NightSurface,
-    onSurface = TextHighEmphasisDark,
-    surfaceVariant = NightBackground,
-    onSurfaceVariant = TextMediumEmphasisDark,
-
-    error = ErrorDark,
-    onError = NightBackground,
-    errorContainer = ErrorDark.copy(alpha = 0.20f),
-    onErrorContainer = ErrorDark,
-
-    outline = TextMediumEmphasisDark,
-    outlineVariant = DividerDark.copy(alpha = 0.5f)
 )
 
 @Composable

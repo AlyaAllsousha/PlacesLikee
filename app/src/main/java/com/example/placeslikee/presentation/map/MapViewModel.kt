@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.placeslikee.domain.models.NewMarkerIfo
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.usecase.auth.GetCurrentIdUseCase
-import com.example.placeslikee.domain.usecase.GetMapMarkUseCase
-import com.example.placeslikee.domain.usecase.RefreshMarkersUseCase
+import com.example.placeslikee.domain.usecase.markermap.GetMapMarkUseCase
+import com.example.placeslikee.domain.usecase.markermap.RefreshMarkersUseCase
 import com.example.placeslikee.domain.usecase.auth.IsUserLoggedInUseCase
 import com.yandex.mapkit.map.CameraPosition
 import dagger.hilt.android.lifecycle.HiltViewModel

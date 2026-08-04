@@ -31,7 +31,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.example.placeslikee.presentation.main.MainScreen
 import com.example.placeslikee.presentation.authentication.AuthScreen
+import com.example.placeslikee.presentation.favourite.FavouriteScreen
 import com.example.placeslikee.presentation.list.ListScreen
+import com.example.placeslikee.presentation.map.details.MarkerDetailsContent
 import com.example.placeslikee.presentation.newmarker.CreateMarkerScreen
 import com.example.placeslikee.presentation.profile.ProfileScreen
 import kotlinx.coroutines.launch
@@ -95,6 +97,16 @@ fun NavHostContainer(
                         navController.popBackStack()
                     })
             }
+            composable (
+                route = NavRoutes.Favourite.routes
+            ){
+                FavouriteScreen(
+                    onNavigateToAuth = {
+                           navController.navigate(NavRoutes.Auth.routes) 
+                    }
+                )
+            }
+
         })
 }
 

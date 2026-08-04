@@ -12,5 +12,5 @@ interface AuthRepository {
     suspend fun changeUserInfo(id: String, name: String)
     suspend fun changeUserEmail(email: String, password: String):Result<String>
     suspend fun syncAuthData()
-    fun logout()
+    suspend fun logout()
 }

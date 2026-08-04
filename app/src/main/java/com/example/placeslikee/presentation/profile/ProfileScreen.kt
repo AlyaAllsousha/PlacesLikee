@@ -1,13 +1,13 @@
 package com.example.placeslikee.presentation.profile
 
-import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import com.example.placeslikee.R
-import androidx.compose.foundation.lazy.items
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,56 +17,43 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.placeslikee.domain.models.UIMarker
-import com.google.android.gms.tasks.Tasks.await
-import kotlinx.coroutines.delay
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.placeslikee.R
+import com.example.placeslikee.presentation.common.LoadingBox
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TopAppBar
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
@@ -74,74 +61,79 @@ fun ProfileScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val isEmailChanging by viewModel.isEmailChanging.collectAsState()
+
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showEditEmailDialog by remember { mutableStateOf(false) }
     var emailDialogServerError by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
-
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        rememberTopAppBarState()
+    )
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { message ->
             if (message.isSuccess) {
                 showEditEmailDialog = false
                 launch {
-                    snackbarHostState.showSnackbar("Письмо с подтверждением отправлено на новую почту!")
+                    snackbarHostState.showSnackbar(
+                        "Письмо с подтверждением отправлено на новую почту!"
+                    )
                 }
             } else {
-                emailDialogServerError =  viewModel.mapErrorToMessage(message.exceptionOrNull()?.message)
+                emailDialogServerError =
+                    viewModel.mapErrorToMessage(message.exceptionOrNull()?.message)
             }
         }
     }
-    LaunchedEffect(state) {
-        if (state is ProfileState.Unauthorized) {
-            onNavigateToAuth()
-        }
-    }
-    when (state) {
-        ProfileState.Idle -> {}
-        ProfileState.Unauthorized -> {}
 
-        ProfileState.Loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(48.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            }
-        }
+    LaunchedEffect(state) {
+        if (state is ProfileState.Unauthorized) onNavigateToAuth()
+    }
+
+    when (state) {
+        ProfileState.Idle,
+        ProfileState.Unauthorized -> Unit
+
+        ProfileState.Loading -> LoadingBox()
 
         is ProfileState.Success -> {
-            Scaffold(
-                topBar = {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Профиль",
-                            style = MaterialTheme.typography.headlineLarge
-                        )
+            val markers = (state as ProfileState.Success).markersList
+            val user = (state as ProfileState.Success).user
 
-                    }
+            Scaffold(
+                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Профиль",
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        colors = TopAppBarDefaults.largeTopAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onBackground
+                        ),
+                        scrollBehavior = scrollBehavior
+                    )
                 },
-                snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                containerColor = MaterialTheme.colorScheme.background
             ) { paddingValues ->
-                val markers = (state as ProfileState.Success).markersList
-                val user = (state as ProfileState.Success).user
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 8.dp,
+                        bottom = 32.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
                         UserInfoCard(
@@ -151,55 +143,25 @@ fun ProfileScreen(
                             onEditEmailClick = { showEditEmailDialog = true }
                         )
                     }
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 16.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Мои места:",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
 
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "${markers.size}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                    item {
+                        SectionHeader(markersCount = markers.size)
                     }
+
                     if (markers.isEmpty()) {
-                        item {
-                            EmptyMarkersPlaceholder()
-                        }
+                        item { EmptyMarkersPlaceholder() }
                     } else {
-                        items(
-                            items = markers,
-                            key = { it.id }
-                        ) { marker ->
+                        items(items = markers, key = { it.id }) { marker ->
                             MarkerItem(
                                 marker = marker,
                                 onEditClick = { },
                                 onDeleteClick = { viewModel.deleteMarker(marker.id) }
                             )
                         }
-                        item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
                 }
 
-                if (showEditNameDialog) {
+                AnimatedVisibility(visible = showEditNameDialog, enter = fadeIn(), exit = fadeOut()) {
                     EditNameDialog(
                         currentName = user.name,
                         onDismiss = { showEditNameDialog = false },
@@ -210,17 +172,16 @@ fun ProfileScreen(
                     )
                 }
 
-                if (showEditEmailDialog) {
+                AnimatedVisibility(visible = showEditEmailDialog, enter = fadeIn(), exit = fadeOut()) {
                     EditEmailDialog(
                         currentEmail = user.email,
                         onDismiss = {
                             showEditEmailDialog = false
-                            emailDialogServerError = null },
-                        isLoading = isEmailChanging,
-                        serverError = emailDialogServerError,
-                        onClearError = {
                             emailDialogServerError = null
                         },
+                        isLoading = isEmailChanging,
+                        serverError = emailDialogServerError,
+                        onClearError = { emailDialogServerError = null },
                         onConfirm = { newEmail, password ->
                             emailDialogServerError = null
                             viewModel.onChangeEmail(newEmail, password)
@@ -228,47 +189,81 @@ fun ProfileScreen(
                     )
                 }
             }
-
         }
-
     }
 }
 
+@Composable
+private fun SectionHeader(markersCount: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Мои места",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Text(
+                text = "$markersCount",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+            )
+        }
+    }
+}
 
 @Composable
 fun EmptyMarkersPlaceholder() {
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
+            .padding(vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.size(80.dp)
         ) {
-            Icon(
-                painter = painterResource(R.drawable.marker_pointer),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.size(64.dp)
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "У вас пока нет маркеров",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.outline
-            )
-            Text(
-                text = "Зажмите точку на карте, чтобы создать новый маркер",
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.marker_pointer),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
         }
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = "Нет добавленных мест",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        Text(
+            text = "Зажмите точку на карте,\nчтобы создать маркер",
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline
+        )
     }
 }
-
-
-
-
-
