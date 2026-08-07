@@ -1,16 +1,23 @@
 package com.example.placeslikee.presentation.favourite
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Lock
@@ -20,10 +27,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,21 +41,36 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.placeslikee.presentation.common.LoadingBox
+import com.example.placeslikee.presentation.common.SearchBar
+import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavouriteScreen(
     viewModel: FavouriteViewModel = hiltViewModel(),
     onNavigateToAuth: () -> Unit,
-    onMarkerClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    val selectedMarker by viewModel.selectedMarker.collectAsState()
+
+    val inputQuery by viewModel.inputQuery.collectAsState()
+    val appliedQuery by viewModel.appliedQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
+
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         rememberTopAppBarState()
     )
@@ -69,53 +94,127 @@ fun FavouriteScreen(
             )
         }
     ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+            ) {
+            SearchBar(
+                query = inputQuery,
+                onQueryChange = viewModel::updateInputQuery,
+                onSearchClick = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    viewModel.applySearch()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
 
-        when (uiState) {
-            FavouriteState.Idle -> {}
+            )
+            Spacer(Modifier.height(16.dp))
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (uiState) {
+                    FavouriteState.Idle -> {}
 
-            FavouriteState.Loading -> {
-                LoadingBox()
-            }
+                    FavouriteState.Loading -> {
+                        LoadingBox()
+                    }
 
-            is FavouriteState.Success -> {
-                val markers = (uiState as FavouriteState.Success).markers
+                    is FavouriteState.Success -> {
+                        val markers = (uiState as FavouriteState.Success).markers
 
-                if (markers.isEmpty()) {
-                    EmptyFavouritesState(
-                        modifier = Modifier.padding(paddingValues)
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 8.dp,
-                            bottom = 24.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(
-                            items = markers,
-                            key = { it.id }
-                        ) { marker ->
-                            FavouriteMarkerItem(
-                                marker = marker,
-                                onClick = { onMarkerClick(marker.id) }
+                        if (markers.isEmpty()) {
+                            EmptyFavouritesState(
+                                modifier = Modifier.padding(paddingValues)
                             )
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                contentPadding = PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 8.dp,
+                                    bottom = 24.dp
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            )
+                            {
+                                items(
+                                    items = markers,
+                                    key = { it.id }
+                                ) { marker ->
+                                    FavouriteMarkerItem(
+                                        marker = marker,
+                                        onClick = { viewModel.onMarkerClick(marker.id) }
+                                    )
+                                }
+                            }
                         }
+                    }
+                    FavouriteState.Unauthorized -> {
+                        UnauthorizedState(
+                            modifier = Modifier.padding(paddingValues),
+                            onNavigateToAuth = onNavigateToAuth
+                        )
+                    }
+                }
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != appliedQuery,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .heightIn(max = 250.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        shadowElevation = 8.dp,
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        LazyColumn {
+                            items(searchResults) { marker ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                            viewModel.selectPlace(marker.name)
+                                        }
+                                        .padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = marker.name,
+                                        fontWeight = FontWeight.Bold,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "от ${marker.authorName}",
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                            }
+                        }
+
                     }
                 }
             }
-
-            FavouriteState.Unauthorized -> {
-                UnauthorizedState(
-                    modifier = Modifier.padding(paddingValues),
-                    onNavigateToAuth = onNavigateToAuth
-                )
-            }
+        }
+    }
+    selectedMarker?.let { marker ->
+        ModalBottomSheet(
+            onDismissRequest = {
+                viewModel.dismissMarkerDetails()
+            },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            MarkerDetailsContent(markerId = marker.id)
         }
     }
 }
@@ -138,7 +237,7 @@ private fun EmptyFavouritesState(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(20.dp))
             Text(
-                text = "Ничего не сохранено",
+                text = "Ничего не найдено",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface

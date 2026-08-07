@@ -1,4 +1,4 @@
-package com.example.placeslikee.presentation.map.details
+package com.example.placeslikee.presentation.markerdetails
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -39,16 +39,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
+import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.presentation.common.LoadingBox
 import java.util.Locale
 
@@ -93,7 +91,7 @@ fun MarkerDetailsContent(
 
 @Composable
 private fun MarkerDetailsBody(
-    marker: com.example.placeslikee.domain.models.UIMarker,
+    marker: UIMarker,
     onToggleLike: () -> Unit
 ) {
     Column(
@@ -101,10 +99,9 @@ private fun MarkerDetailsBody(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
-        // ── Фото ─────────────────────────────────────────────────────────────
-        PhotoSection(imageUrl = marker.image)
-
-        // ── Контент ──────────────────────────────────────────────────────────
+        if(marker.image != null) {
+            PhotoSection(imageUrl = marker.image)
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -112,7 +109,6 @@ private fun MarkerDetailsBody(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // Название + лайк
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
@@ -137,7 +133,6 @@ private fun MarkerDetailsBody(
                 )
             }
 
-            // Координаты
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Rounded.LocationOn,
@@ -150,7 +145,7 @@ private fun MarkerDetailsBody(
                     text = String.format(
                         Locale.US,
                         "%.5f,  %.5f",
-                        marker.lat,
+                        marker.latitude,
                         marker.longitude
                     ),
                     style = MaterialTheme.typography.labelMedium,
@@ -162,7 +157,6 @@ private fun MarkerDetailsBody(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
 
-            // Описание
             Text(
                 text = marker.description ?: "Автор не добавил описание.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -174,12 +168,10 @@ private fun MarkerDetailsBody(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
 
-            // Автор
             AuthorRow(authorName = marker.authorName)
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Кнопка маршрута
             Button(
                 onClick = {},
                 modifier = Modifier
@@ -238,19 +230,6 @@ private fun PhotoSection(imageUrl: String?) {
                 error = { PhotoErrorPlaceholder() }
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-                            ),
-                            startY = 120f
-                        )
-                    )
-            )
         } else {
             PhotoErrorPlaceholder()
         }

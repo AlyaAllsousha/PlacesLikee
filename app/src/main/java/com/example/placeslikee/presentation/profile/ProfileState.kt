@@ -12,3 +12,7 @@ sealed interface ProfileState {
         val user: UserEntity
     ): ProfileState
 }
+sealed class ProfileUiEvent {
+    data class NameChanged(val message: String) : ProfileUiEvent()
+    data class  EmailChangeEmailSent(val result: Result<String>) : ProfileUiEvent()
+}

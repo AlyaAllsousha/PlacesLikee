@@ -1,4 +1,4 @@
-package com.example.placeslikee.presentation.map.details
+package com.example.placeslikee.presentation.markerdetails
 
 import com.example.placeslikee.domain.models.UIMarker
 

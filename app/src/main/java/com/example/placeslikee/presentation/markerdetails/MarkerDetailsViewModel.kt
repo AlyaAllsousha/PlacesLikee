@@ -1,6 +1,5 @@
-package com.example.placeslikee.presentation.map.details
+package com.example.placeslikee.presentation.markerdetails
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.placeslikee.domain.usecase.likes.ToggleLikedUseCase
@@ -12,8 +11,6 @@ import kotlinx.coroutines.launch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
-
-import javax.inject.Inject
 
 @HiltViewModel(
     assistedFactory = MarkerDetailsViewModel.Factory::class

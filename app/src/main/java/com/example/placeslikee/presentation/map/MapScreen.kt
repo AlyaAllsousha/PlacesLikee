@@ -6,6 +6,8 @@ import android.graphics.PointF
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,9 +47,12 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.placeslikee.R
 import com.example.placeslikee.domain.models.NewMarkerIfo
-import com.example.placeslikee.presentation.map.details.MarkerDetailsContent
+import com.example.placeslikee.presentation.common.CustomSnackbar
+import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
+import com.yandex.mapkit.geometry.BoundingBox
+import com.yandex.mapkit.geometry.Geometry
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.layers.ObjectEvent
 import com.yandex.mapkit.map.CameraListener
@@ -57,11 +62,11 @@ import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.InputListener
 import com.yandex.mapkit.map.Map
 import com.yandex.mapkit.map.MapObjectTapListener
+import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.mapkit.user_location.UserLocationObjectListener
 import com.yandex.mapkit.user_location.UserLocationView
 import com.yandex.runtime.image.ImageProvider
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
@@ -71,6 +76,7 @@ fun MapScreen(
     viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
     onNavigateToAuth: () -> Unit,
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
+    searchQuery: String = "",
 ) {
     val state by viewModel.mapState.collectAsState()
 
@@ -85,6 +91,9 @@ fun MapScreen(
     )
 
     var userLocationLayer by remember { mutableStateOf<UserLocationLayer?>(null) }
+
+    val placemarksMap = remember { mutableMapOf<String, PlacemarkMapObject>() }
+    var previousSelectedId by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -164,6 +173,10 @@ fun MapScreen(
 
         }
     }
+
+    LaunchedEffect(searchQuery) {
+        viewModel.setSearchQuery(searchQuery)
+    }
     LaunchedEffect(Unit) {
         viewModel.navigateToAuth.collect {
             onNavigateToAuth()
@@ -185,135 +198,246 @@ fun MapScreen(
             )
         }
     }
-
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .clip(RoundedCornerShape(16.dp))
-        ) {
-            AndroidView(
-                factory = {
-                    mapView.apply {
-                        val map = mapWindow.map
-                        map.addInputListener(inputListener)
-                        map.addCameraListener(cameraListener)
-                        viewModel.getLatestCameraPosition()?.let { savedPos ->
-                            map.move(savedPos)
-
-                        }
-                    }
-                },
-                update = { view ->
-                    val hasFineLocation = ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-
-                    val hasCoarseLocation = ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-
-                    if (isLocationGranted && (hasFineLocation || hasCoarseLocation)) {
-                        try {
-                            if (userLocationLayer == null) {
-                                val kit = MapKitFactory.getInstance()
-                                val layer = kit.createUserLocationLayer(view.mapWindow)
-
-                                layer.setObjectListener(userLocationObjectListener)
-                                layer.isVisible = true
-
-                                userLocationLayer = layer
-                            }
-
-                        } catch (e: SecurityException) {
-                            Log.e("my log", "MapScreen: ${e.message}")
-                        }
-                    }
-                    userLocationLayer?.isVisible = isLocationGranted
-
-                },
-                modifier = Modifier.fillMaxSize(),
-                )
-            FloatingActionButton(
-                onClick = {
-                    if(!isLocationGranted){
-                        launcher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                        )
-                    }
-                    else{
-                        val targetLocation = userLocationLayer?.cameraPosition()?.target
-
-                        if(targetLocation != null){
-                            mapView.mapWindow.map.move(
-                                CameraPosition(targetLocation, 17.0f, 0.0f, 0.0f),
-                                Animation(Animation.Type.SMOOTH, 1f),
-                                null
-                            )
-                        }
-                        else{
-                            scope.launch {
-                                snackbarHostState.currentSnackbarData?.dismiss()
-                                snackbarHostState.showSnackbar(
-                                    message = "Ишем ваше местоположение...",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary,
-                shape = MaterialTheme.shapes.medium
-
-            ) {
-                Icon(
-                    painter = painterResource( R.drawable.baseline_my_location_24),
-                    contentDescription = "Моё местоположение"
-                )
-            }
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 80.dp)
-
+    LaunchedEffect(Unit) {
+        viewModel.snackbarMessage.collect { message ->
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
             )
-            if(state.isLoading){
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .pointerInput(Unit){},
-                    contentAlignment = Alignment.Center
-                ){
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(16.dp))
+    ) {
+        AndroidView(
+            factory = {
+                mapView.apply {
+                    val map = mapWindow.map
+                    map.addInputListener(inputListener)
+                    map.addCameraListener(cameraListener)
+                    viewModel.getLatestCameraPosition()?.let { savedPos ->
+                        map.move(savedPos)
+
+                    }
                 }
+            },
+            update = { view ->
+                val hasFineLocation = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+
+                val hasCoarseLocation = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (isLocationGranted && (hasFineLocation || hasCoarseLocation)) {
+                    try {
+                        if (userLocationLayer == null) {
+                            val kit = MapKitFactory.getInstance()
+                            val layer = kit.createUserLocationLayer(view.mapWindow)
+
+                            layer.setObjectListener(userLocationObjectListener)
+                            layer.isVisible = true
+
+                            userLocationLayer = layer
+                        }
+
+                    } catch (e: SecurityException) {
+                        Log.e("my log", "MapScreen: ${e.message}")
+                    }
+                }
+                userLocationLayer?.isVisible = isLocationGranted
+
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+        FloatingActionButton(
+            onClick = {
+                if (!isLocationGranted) {
+                    launcher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                } else {
+                    val targetLocation = userLocationLayer?.cameraPosition()?.target
+
+                    if (targetLocation != null) {
+                        mapView.mapWindow.map.move(
+                            CameraPosition(targetLocation, 17.0f, 0.0f, 0.0f),
+                            Animation(Animation.Type.SMOOTH, 1f),
+                            null
+                        )
+                    } else {
+                        scope.launch {
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            snackbarHostState.showSnackbar(
+                                message = "Ишем ваше местоположение...",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    }
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+            shape = MaterialTheme.shapes.medium
+
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.baseline_my_location_24),
+                contentDescription = "Моё местоположение"
+            )
+        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .padding(bottom = 80.dp)
+                .align(Alignment.BottomCenter)
+
+        ) { snackbarData ->
+            CustomSnackbar(
+                snackbarData = snackbarData,
+                isIconShowed = false
+            )
+
+        }
+
+        if (state.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .pointerInput(Unit) {},
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             }
         }
+    }
 
     LaunchedEffect(state.points, mapView) {
         val mapObjects = mapView.mapWindow.map.mapObjects
         mapObjects.clear()
-        val imageProvider = ImageProvider.fromResource(context, R.drawable.marker_pointer)
-        val iconStyle = IconStyle().apply {
-            anchor = PointF(0.5f, 1.0f)
-            scale = 0.07f
-        }
-        state.points.forEach { point ->
-            val placemark = mapObjects.addPlacemark(Point(point.lat, point.longitude))
-            placemark.setIcon(imageProvider, iconStyle)
+        placemarksMap.clear()
 
+        val imageProvider = ImageProvider.fromResource(context, R.drawable.marker_pointer)
+
+        state.points.forEach { point ->
+            val isSelected = point.id == selectedMarker?.id
+            val initialScale = if (isSelected) 0.08f else 0.05f
+            val placemark = mapObjects.addPlacemark(Point(point.latitude, point.longitude))
+            val iconStyle = IconStyle().apply {
+                anchor = PointF(0.5f, 1.0f)
+                scale = initialScale
+                zIndex = if (isSelected) 1f else 0f
+            }
+            placemark.setIcon(imageProvider, iconStyle)
             placemark.userData = point.id
             placemark.addTapListener(tapListener)
+
+            placemarksMap[point.id] = placemark
+
+        }
+    }
+    LaunchedEffect(selectedMarker) {
+        val newSelectedId = selectedMarker?.id
+        previousSelectedId?.let { oldId ->
+            if (oldId != newSelectedId) {
+                placemarksMap[oldId]?.let { placemark ->
+                    launch {
+                        placemark.zIndex = 0f
+                        val scaleAnim = Animatable(0.08f)
+                        scaleAnim.animateTo(
+                            targetValue = 0.05f,
+                            animationSpec = tween(durationMillis = 300)
+                        ) {
+                            placemark.setIconStyle(IconStyle().apply {
+                                anchor = PointF(0.5f, 1.0f)
+                                scale = this@animateTo.value
+                            })
+                        }
+                    }
+                }
+            }
+        }
+        newSelectedId?.let {newId ->
+            placemarksMap[newId]?.let {placemark ->
+                launch{
+                    placemark.zIndex = 1f
+                    val scaleAnim = Animatable(0.05f)
+                    scaleAnim.animateTo(
+                        targetValue = 0.08f,
+                        animationSpec =  tween(durationMillis = 300)
+                    ){
+                        placemark.setIconStyle(IconStyle().apply{
+                            anchor = PointF(0.5f, 1.0f)
+                            scale = this@animateTo.value
+                        })
+                    }
+                }
+            }
+
+        }
+        previousSelectedId = newSelectedId
+    }
+    LaunchedEffect(state.points, searchQuery) {
+        if (searchQuery.isNotBlank() && state.points.isNotEmpty()) {
+            val map = mapView.mapWindow.map
+
+            if (state.points.size == 1) {
+                val point = state.points.first()
+                val targetPoint = Point(point.latitude, point.longitude)
+                map.move(
+                    CameraPosition(targetPoint, 16.0f, 0.0f, 0.0f),
+                    Animation(Animation.Type.SMOOTH, 1f),
+                    null
+                )
+            } else {
+                val minLat = state.points.minBy { it.latitude }.latitude
+                val maxLat = state.points.maxBy { it.latitude }.latitude
+                val minLon = state.points.minBy { it.longitude }.longitude
+                val maxLon = state.points.maxBy { it.longitude }.longitude
+
+                if (minLat == maxLat && minLon == maxLon) {
+                    map.move(
+                        CameraPosition(Point(minLat, minLon), 16.0f, 0.0f, 0.0f),
+                        Animation(Animation.Type.SMOOTH, 1f),
+                        null
+                    )
+                    return@LaunchedEffect
+                }
+                val southWest = Point(minLat, minLon)
+                val northEast = Point(maxLat, maxLon)
+
+                val boundingBox = BoundingBox(southWest, northEast)
+                var cameraPos = map.cameraPosition(Geometry.fromBoundingBox(boundingBox))
+
+                val paddedZoom = (cameraPos.zoom - 0.5f).coerceAtLeast(0f)
+                cameraPos = CameraPosition(
+                    cameraPos.target,
+                    paddedZoom,
+                    cameraPos.azimuth,
+                    cameraPos.tilt
+                )
+                map.move(
+                    cameraPos,
+                    Animation(Animation.Type.SMOOTH, 1.2f),
+                    null
+                )
+            }
         }
     }
     selectedMarker?.let { marker ->

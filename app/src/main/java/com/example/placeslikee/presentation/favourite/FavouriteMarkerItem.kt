@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -39,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import com.example.placeslikee.domain.models.UIMarker
+import com.example.placeslikee.presentation.common.ImagePlaceholder
 import java.util.Locale
 
 @Composable
@@ -57,13 +57,14 @@ fun FavouriteMarkerItem(
         ),
         onClick = onClick
     ) {
+
         Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-            ) {
-                if (!marker.image.isNullOrEmpty()) {
+            if (!marker.image.isNullOrEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                ) {
                     SubcomposeAsyncImage(
                         model = marker.image,
                         contentDescription = "Фото локации",
@@ -84,47 +85,60 @@ fun FavouriteMarkerItem(
                         },
                         error = { ImagePlaceholder() }
                     )
-                } else {
-                    ImagePlaceholder()
-                }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.55f)
-                                ),
-                                startY = 80f
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.55f)
+                                    ),
+                                    startY = 80f
+                                )
                             )
-                        )
-                )
+                    )
 
-                // Лайки поверх изображения (сверху справа)
-                LikesChip(
-                    likesAmount = marker.likesAmount,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(12.dp)
-                )
+                    LikesChip(
+                        likesAmount = marker.likesAmount,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                    )
+                }
             }
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .padding(16.dp)
             ) {
-                Text(
-                    text = marker.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
 
+                    Text(
+                        text = marker.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (marker.image.isNullOrEmpty()) {
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        LikesChip(
+                            likesAmount = marker.likesAmount,
+                            modifier = Modifier
+                                .padding(12.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -139,7 +153,7 @@ fun FavouriteMarkerItem(
                         text = String.format(
                             Locale.US,
                             "%.5f,  %.5f",
-                            marker.lat,
+                            marker.latitude,
                             marker.longitude
                         ),
                         style = MaterialTheme.typography.labelMedium,
@@ -224,34 +238,3 @@ private fun LikesChip(
     }
 }
 
-@Composable
-private fun ImagePlaceholder() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surfaceVariant,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                    )
-                )
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Rounded.LocationOn,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                modifier = Modifier.size(40.dp)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Нет фото",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-            )
-        }
-    }
-}

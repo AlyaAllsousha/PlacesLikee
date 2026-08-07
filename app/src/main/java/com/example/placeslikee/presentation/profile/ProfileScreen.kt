@@ -3,7 +3,6 @@ package com.example.placeslikee.presentation.profile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,14 +14,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.LocationOn
+
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -39,7 +35,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,12 +47,18 @@ import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
+import com.example.placeslikee.presentation.common.CustomSnackbar
+import com.example.placeslikee.presentation.profile.dialogs.EditEmailDialog
+import com.example.placeslikee.presentation.profile.dialogs.EditNameDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
-    onNavigateToAuth: () -> Unit
+    onNavigateToAuth: () -> Unit,
+    onNavigateToEdit: (String) -> Unit,
+    externalSnackbarMessage: String? = null,
+    onClearSnackbarMessage: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val isEmailChanging by viewModel.isEmailChanging.collectAsState()
@@ -73,17 +74,32 @@ fun ProfileScreen(
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { message ->
-            if (message.isSuccess) {
-                showEditEmailDialog = false
-                launch {
-                    snackbarHostState.showSnackbar(
-                        "Письмо с подтверждением отправлено на новую почту!"
-                    )
+            when(message){
+                is ProfileUiEvent.NameChanged -> {
+                    launch {
+                        snackbarHostState.showSnackbar(
+                            message.message
+                        )
+                    }
                 }
-            } else {
-                emailDialogServerError =
-                    viewModel.mapErrorToMessage(message.exceptionOrNull()?.message)
+
+                is ProfileUiEvent.EmailChangeEmailSent -> {
+                    if(message.result.isSuccess){
+                        showEditEmailDialog = false
+                        launch {
+                            snackbarHostState.showSnackbar(
+                                "Письмо с подтверждением отправлено на новую почту!"
+                            )
+                        }
+                    }
+                    else{
+                        emailDialogServerError =
+                            viewModel.mapErrorToMessage(message.result.exceptionOrNull()?.message)
+                    }
+                }
             }
+
+
         }
     }
 
@@ -91,6 +107,14 @@ fun ProfileScreen(
         if (state is ProfileState.Unauthorized) onNavigateToAuth()
     }
 
+    LaunchedEffect(externalSnackbarMessage) {
+        if (externalSnackbarMessage != null) {
+            launch {
+                snackbarHostState.showSnackbar(externalSnackbarMessage)
+            }
+            onClearSnackbarMessage()
+        }
+    }
     when (state) {
         ProfileState.Idle,
         ProfileState.Unauthorized -> Unit
@@ -119,7 +143,13 @@ fun ProfileScreen(
                         scrollBehavior = scrollBehavior
                     )
                 },
-                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                snackbarHost = {
+                    SnackbarHost(hostState = snackbarHostState){snackbarData ->
+                        CustomSnackbar(
+                            snackbarData = snackbarData)
+
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.background
             ) { paddingValues ->
 
@@ -154,7 +184,9 @@ fun ProfileScreen(
                         items(items = markers, key = { it.id }) { marker ->
                             MarkerItem(
                                 marker = marker,
-                                onEditClick = { },
+                                onEditClick = {
+                                    onNavigateToEdit(marker.id)
+                                },
                                 onDeleteClick = { viewModel.deleteMarker(marker.id) }
                             )
                         }

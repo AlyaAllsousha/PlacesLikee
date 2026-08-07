@@ -1,8 +1,6 @@
 package com.example.placeslikee.presentation.navigation
 
 
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,9 +17,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Constraints
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -33,11 +31,9 @@ import com.example.placeslikee.presentation.main.MainScreen
 import com.example.placeslikee.presentation.authentication.AuthScreen
 import com.example.placeslikee.presentation.favourite.FavouriteScreen
 import com.example.placeslikee.presentation.list.ListScreen
-import com.example.placeslikee.presentation.map.details.MarkerDetailsContent
 import com.example.placeslikee.presentation.newmarker.CreateMarkerScreen
 import com.example.placeslikee.presentation.profile.ProfileScreen
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.time.delay
+import com.example.placeslikee.presentation.profile.editMarker.EditMarkerScreen
 
 @Composable
 fun NavHostContainer(
@@ -79,9 +75,21 @@ fun NavHostContainer(
                         navController.navigate(NavRoutes.Main.routes)
                     })
             }
-            composable(NavRoutes.Profile.routes) {
+            composable(NavRoutes.Profile.routes) { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val externalSnackbarMessage by savedStateHandle
+                    .getStateFlow<String?>("edit_message", null)
+                    .collectAsState()
                 ProfileScreen(
-                    onNavigateToAuth = { navController.navigate(NavRoutes.Auth.routes) })
+                    externalSnackbarMessage = externalSnackbarMessage,
+                    onClearSnackbarMessage = {
+                        savedStateHandle.remove<String>("snackbar_message")
+                    },
+                    onNavigateToAuth = { navController.navigate(NavRoutes.Auth.routes) },
+                    onNavigateToEdit = {markerId ->
+                        navController.navigate("${NavRoutes.EditMarker.routes}/$markerId")
+                    }
+                )
             }
             composable(NavRoutes.List.routes) {
                 ListScreen()
@@ -103,6 +111,22 @@ fun NavHostContainer(
                 FavouriteScreen(
                     onNavigateToAuth = {
                            navController.navigate(NavRoutes.Auth.routes) 
+                    }
+                )
+            }
+            composable (
+                route = "${NavRoutes.EditMarker.routes}/{markerId}",
+                arguments = listOf(
+                    navArgument("markerId") { type = NavType.StringType }
+                )
+
+            ){
+                EditMarkerScreen(
+                    onNavigateBack = {message ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("edit_message", message)
+                        navController.popBackStack()
                     }
                 )
             }

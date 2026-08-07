@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -62,10 +63,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.example.placeslikee.R
+import com.example.placeslikee.presentation.common.CustomSnackbar
+import com.example.placeslikee.presentation.common.ImagePreviewCard
+import com.example.placeslikee.presentation.common.MarkerTextField
+import com.example.placeslikee.presentation.common.SaveButton
+import com.example.placeslikee.presentation.common.SectionLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,7 +103,12 @@ fun CreateMarkerScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackBarHostState) },
+        snackbarHost = { SnackbarHost(snackBarHostState){snackbarData ->
+            CustomSnackbar(
+                snackbarData = snackbarData,
+                isSuccess = true
+            )
+        } },
         topBar = {
             TopAppBar(
                 title = {
@@ -159,7 +171,9 @@ fun CreateMarkerScreen(
                         placeholder = "Например: Смотровая площадка",
                         leadingIcon = rememberVectorPainter(image = Icons.Outlined.LocationOn),
                         isError = name.isBlank() && state is NewMarkerState.Error,
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+
                     )
 
                     MarkerTextField(
@@ -169,7 +183,9 @@ fun CreateMarkerScreen(
                         placeholder = "Расскажите об этом месте...",
                         leadingIcon = rememberVectorPainter(image = Icons.Outlined.Edit),
                         singleLine = false,
-                        minLines = 3
+                        minLines = 3,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+
                     )
 
                     SectionLabel(text = "Фотография")
@@ -189,6 +205,7 @@ fun CreateMarkerScreen(
                 SaveButton(
                     isLoading = state is NewMarkerState.Loading,
                     isEnabled = name.isNotBlank() && state !is NewMarkerState.Loading,
+                    text = "Сохранить место",
                     onClick = {
                         focusManager.clearFocus()
                         viewModel.onSaveClick(
@@ -214,164 +231,8 @@ fun CreateMarkerScreen(
     }
 }
 
-@Composable
-private fun ImagePreviewCard(imageUrl: String) {
-    AnimatedVisibility(
-        visible = imageUrl.isNotBlank(),
-        enter = fadeIn(),
-        exit = fadeOut()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            SubcomposeAsyncImage(
-                model = imageUrl,
-                contentDescription = "Превью фото",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                loading = {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                error = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Icon(
-                            painter = painterResource( R.drawable.outline_image_24),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Не удалось загрузить фото",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
-            )
-        }
-    }
-}
 
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
-    )
-}
 
-@Composable
-private fun MarkerTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    placeholder: String,
-    leadingIcon: Painter,
-    singleLine: Boolean,
-    isError: Boolean = false,
-    minLines: Int = 1,
-    maxLines: Int = 3
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        placeholder = {
-            Text(
-                text = placeholder,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-            )
-        },
-        leadingIcon = {
-            Icon(
-                painter = leadingIcon,
-                contentDescription = null,
-                tint = if (value.isNotBlank())
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.outline
-            )
-        },
-        singleLine = singleLine,
-        minLines = minLines,
-        maxLines = maxLines,
-        isError = isError,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        )
-    )
-}
 
-// ── Кнопка сохранения ────────────────────────────────────────────────────────
-@Composable
-private fun SaveButton(
-    isLoading: Boolean,
-    isEnabled: Boolean,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        enabled = isEnabled,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            disabledContainerColor = MaterialTheme.colorScheme.outlineVariant
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 0.dp
-        )
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Rounded.Check,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Сохранить место",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
+
+

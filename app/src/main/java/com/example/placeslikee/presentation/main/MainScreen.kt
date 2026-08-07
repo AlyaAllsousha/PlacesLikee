@@ -1,6 +1,8 @@
 package com.example.placeslikee.presentation.main
 
+import android.graphics.Paint
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -14,11 +16,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
@@ -27,6 +34,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -47,14 +55,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.room.util.TableInfo
+import androidx.room.util.query
 import com.example.placeslikee.domain.models.NewMarkerIfo
+import com.example.placeslikee.presentation.common.SearchBar
 import com.example.placeslikee.presentation.map.MapScreen
 import kotlinx.coroutines.launch
 
@@ -64,14 +78,23 @@ fun MainScreen(
     onNavigateToAuth: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
+
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val user by viewModel.currentUser.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
+    val inputQuery by viewModel.inputQuery.collectAsState()
+    val appliedQuery by viewModel.appliedQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
+
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     var isMapVisible by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
+
 
     fun navigateSafely(action: () -> Unit) {
         scope.launch {
@@ -100,36 +123,87 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // ── Строка поиска ─────────────────────────────────────────────
             SearchBar(
+                query = inputQuery,
+                onQueryChange = viewModel::updateInputQuery,
+                onSearchClick = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    viewModel.applySearch()},
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .padding(top = 8.dp, bottom = 12.dp)
             )
 
-            // ── Карта ─────────────────────────────────────────────────────
-            if (isMapVisible) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp)
-                        .clip(MaterialTheme.shapes.large) // скругленные края карты
-                ) {
-                    MapScreen(
-                        onNavigateToAuth = { navigateSafely { onNavigateToAuth() } },
-                        onNavigateToCreateMarker = { navigateSafely { onNavigateToCreateMarker(it) } }
-                    )
-
-                    // Кнопка обновления поверх карты
-                    RefreshButton(
-                        isRefreshing = isRefreshing,
-                        onClick = { viewModel.refresh() },
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isMapVisible) {
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(12.dp)
-                    )
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp)
+                            .clip(MaterialTheme.shapes.large)
+                    ) {
+                        MapScreen(
+                            searchQuery = appliedQuery,
+                            onNavigateToAuth = { navigateSafely { onNavigateToAuth() } },
+                            onNavigateToCreateMarker = {
+                                navigateSafely {
+                                    onNavigateToCreateMarker(it)
+                                }
+                            }
+                        )
+
+                        RefreshButton(
+                            isRefreshing = isRefreshing,
+                            onClick = { viewModel.refresh() },
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(12.dp)
+                        )
+                    }
+                }
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != appliedQuery,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .heightIn(max = 250.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        shadowElevation = 8.dp
+                    ) {
+                        LazyColumn {
+                            items(searchResults) { marker ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                            viewModel.selectPlace(marker.name)
+                                        }
+                                        .padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = marker.name,
+                                        fontWeight = FontWeight.Bold,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "от ${marker.authorName}",
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -148,7 +222,6 @@ fun MainScreen(
     }
 }
 
-// ── TopBar ───────────────────────────────────────────────────────────────────
 @Composable
 private fun MainTopBar(
     userName: String?,
@@ -163,7 +236,6 @@ private fun MainTopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // ── Блок пользователя ─────────────────────────────────────────────
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -171,7 +243,6 @@ private fun MainTopBar(
                 .clickable(enabled = isLoggedIn, onClick = onProfileClick)
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            // Аватар с инициалом или иконкой гостя
             Surface(
                 shape = CircleShape,
                 color = if (isLoggedIn)
@@ -207,7 +278,6 @@ private fun MainTopBar(
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            // Имя / "Гость"
             Column {
                 Text(
                     text = if (isLoggedIn) "Привет," else "Добро пожаловать",
@@ -228,14 +298,14 @@ private fun MainTopBar(
             }
         }
 
-        // ── Кнопка Войти / Выйти ──────────────────────────────────────────
         Surface(
             shape = MaterialTheme.shapes.large,
             color = if (!isLoggedIn)
                 MaterialTheme.colorScheme.primary
             else
                 MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.clip(MaterialTheme.shapes.large)
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.large)
                 .clickable(onClick = onAuthClick)
         ) {
             Text(
@@ -252,41 +322,8 @@ private fun MainTopBar(
     }
 }
 
-// ── Строка поиска ────────────────────────────────────────────────────────────
-@Composable
-private fun SearchBar(modifier: Modifier = Modifier) {
-    TextField(
-        value = "",
-        onValueChange = {},
-        modifier = modifier,
-        placeholder = {
-            Text(
-                text = "Поиск по местам или авторам...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.outline
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.size(20.dp)
-            )
-        },
-        singleLine = true,
-        shape = MaterialTheme.shapes.large,
-        colors = TextFieldDefaults.colors(
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-        )
-    )
-}
 
-// ── Кнопка обновления ────────────────────────────────────────────────────────
+
 @Composable
 private fun RefreshButton(
     isRefreshing: Boolean,

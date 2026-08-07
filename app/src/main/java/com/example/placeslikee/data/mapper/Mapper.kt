@@ -38,7 +38,7 @@ fun RemoteMarker.toMarkerEntity(): MarkerEntity = MarkerEntity(
 fun MarkerWithAuthor.toUIMarker(): UIMarker {
     return UIMarker(
         id = mark.id,
-        lat = mark.lat,
+        latitude = mark.lat,
         longitude = mark.longitude,
         name = mark.name,
         authorId = mark.authorId ?: "",
@@ -53,7 +53,7 @@ fun MarkerWithAuthor.toUIMarker(): UIMarker {
 
 fun UIMarker.toMarkerEntity(): MarkerEntity = MarkerEntity(
     id = id,
-    lat = lat,
+    lat = latitude,
     longitude = longitude,
     name = name,
     authorId = authorId,

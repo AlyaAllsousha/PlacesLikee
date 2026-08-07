@@ -1,8 +1,10 @@
 package com.example.placeslikee.presentation.map
 
 import android.util.Log
+import androidx.compose.ui.text.toLowerCase
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.util.query
 import com.example.placeslikee.domain.models.NewMarkerIfo
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.usecase.auth.GetCurrentIdUseCase
@@ -11,11 +13,14 @@ import com.example.placeslikee.domain.usecase.markermap.RefreshMarkersUseCase
 import com.example.placeslikee.domain.usecase.auth.IsUserLoggedInUseCase
 import com.yandex.mapkit.map.CameraPosition
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -25,10 +30,18 @@ class MapViewModel @Inject constructor(
     private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
     private val getCurrentIdUseCase: GetCurrentIdUseCase,
 
-) : ViewModel() {
+    ) : ViewModel() {
     private val _mapState = MutableStateFlow(MapState())
     val mapState = _mapState.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+
+    private val _snackbarMessage = Channel<String>()
+    val snackbarMessage = _snackbarMessage.receiveAsFlow()
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     //Auxiliary data for camera position change
     private val _isFirstTimeLoading = MutableStateFlow(true)
@@ -51,7 +64,6 @@ class MapViewModel @Inject constructor(
 
     fun updateCameraPosition(position: CameraPosition) {
         _cameraPosition.value = position
-
     }
 
     fun getLatestCameraPosition(): CameraPosition? = _cameraPosition.value
@@ -66,25 +78,38 @@ class MapViewModel @Inject constructor(
     private fun loadPoints() {
         viewModelScope.launch {
             _mapState.value = _mapState.value.copy(isLoading = true)
-            getMapMarkerUseCase().collect { points ->
-                _mapState.value = _mapState.value.copy(points = points, isLoading = false)
+            combine(
+                getMapMarkerUseCase(),
+                _searchQuery
+            ) { points, query ->
+                val filtered  = if(query.isBlank()){
+                    points
+                }else{
+                    val lowerCaseQuery = query.lowercase()
+                    points.filter{marker ->
+                        marker.name.lowercase().contains(lowerCaseQuery) ||
+                                (marker.authorName ?: "").lowercase().contains(lowerCaseQuery) }
+
+                }
+                Pair(filtered, query)
+                }.collect {(filteredPoint, query) ->
+                    if(filteredPoint.isEmpty() && query.isNotBlank()){
+                        _snackbarMessage.send("Ничего не найдено")
+                    }
+                _mapState.value = _mapState.value.copy(points = filteredPoint, isLoading = false)
+
             }
         }
     }
 
 
-
     fun onMapClick(event: MapEvent) {
         when (event) {
             is MapEvent.OnMapLongClick -> {
-                //If not user -> SingIn
-                //else -> createMark
                 handleLongClick(event.lat, event.lon)
             }
 
             is MapEvent.onPointClick -> {
-                //if the creator -> ChangeMark
-                //else -> MarkDiscription
                 val clickMarker = mapState.value.points.find { it.id == event.pointId }
                 _selectedMarker.value = clickMarker
             }

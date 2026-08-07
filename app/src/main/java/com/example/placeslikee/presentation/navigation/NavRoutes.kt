@@ -6,6 +6,6 @@ sealed class NavRoutes(val routes: String) {
     object List : NavRoutes("list")
     object Auth : NavRoutes("auth")
     object Favourite : NavRoutes("favourite")
-    object MarkerDetails : NavRoutes("marker_details")
+    object EditMarker : NavRoutes("edit_marker")
     object CreateMark : NavRoutes("create_mark")
 }

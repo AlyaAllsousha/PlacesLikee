@@ -32,8 +32,9 @@ class ProfileViewModel @Inject constructor(
     private val _state = MutableStateFlow<ProfileState>(ProfileState.Idle)
     val state = _state.asStateFlow()
 
-    private val _uiEvent = Channel<Result<String>>()
+    private val _uiEvent = Channel<ProfileUiEvent>()
     val uiEvent  = _uiEvent.receiveAsFlow()
+
 
     private val _isEmailChanging = MutableStateFlow(false)
     val isEmailChanging  = _isEmailChanging.asStateFlow()
@@ -74,6 +75,7 @@ class ProfileViewModel @Inject constructor(
     fun onChangeUserInfo(name: String) {
         viewModelScope.launch {
             changeUserNameUseCase(name)
+            _uiEvent.send(ProfileUiEvent.NameChanged("Имя успешно изменено"))
         }
     }
     fun onChangeEmail(email: String, password: String){
@@ -81,11 +83,10 @@ class ProfileViewModel @Inject constructor(
             try {
                 _isEmailChanging.value = true
                 val result = changeUserEmailUseCase(email, password)
-                _uiEvent.send(result)
+                _uiEvent.send(ProfileUiEvent.EmailChangeEmailSent(result))
             }
             finally {
                 _isEmailChanging.value = false
-
             }
 
         }
