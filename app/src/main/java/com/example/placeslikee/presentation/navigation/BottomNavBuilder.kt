@@ -67,7 +67,8 @@ fun NavHostContainer(
                     navController.navigate(NavRoutes.Profile.routes)
                 }, onNavigateToCreateMarker = { info ->
                     navController.navigate("${NavRoutes.CreateMark.routes}/${info.lat}/${info.lon}")
-                })
+                }
+                )
             }
             composable(NavRoutes.Auth.routes) {
                 AuthScreen(
@@ -91,9 +92,7 @@ fun NavHostContainer(
                     }
                 )
             }
-            composable(NavRoutes.List.routes) {
-                ListScreen()
-            }
+
             composable(
                 route = "${NavRoutes.CreateMark.routes}/{lat}/{lon}",
                 arguments = listOf(

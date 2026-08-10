@@ -18,7 +18,8 @@ import javax.inject.Inject
 @HiltViewModel
 class FavouriteViewModel @Inject constructor(
     private val getLikedMarksUseCase: GetLikedMarksUseCase,
-    private val isUserLoggedInUseCase: IsUserLoggedInUseCase
+    private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
+    private val toggleLikedUseCase: ToggleLikedUseCase
 ): ViewModel() {
     private val _uiState = MutableStateFlow<FavouriteState>(FavouriteState.Idle)
     val uiState = _uiState.asStateFlow()
@@ -103,6 +104,11 @@ class FavouriteViewModel @Inject constructor(
         _appliedQuery.value = _inputQuery.value
     }
 
+    fun onToggleLike(markerId: String){
+        viewModelScope.launch {
+            toggleLikedUseCase(markerId)
+        }
+    }
     fun dismissMarkerDetails() {
         _selectedMarker.value = null
     }

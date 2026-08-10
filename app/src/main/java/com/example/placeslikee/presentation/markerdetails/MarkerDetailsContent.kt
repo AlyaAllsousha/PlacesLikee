@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import com.example.placeslikee.domain.models.UIMarker
+import com.example.placeslikee.presentation.common.LikeButton
 import com.example.placeslikee.presentation.common.LoadingBox
 import java.util.Locale
 
@@ -258,64 +259,6 @@ private fun PhotoErrorPlaceholder() {
     }
 }
 
-@Composable
-private fun LikeButton(
-    liked: Boolean,
-    likesAmount: Int,
-    onToggle: () -> Unit
-) {
-    val scale by animateFloatAsState(
-        targetValue = if (liked) 1.2f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "like_scale"
-    )
-
-    val iconTint by animateColorAsState(
-        targetValue = if (liked)
-            MaterialTheme.colorScheme.secondary
-        else
-            MaterialTheme.colorScheme.outline,
-        label = "like_color"
-    )
-
-    Surface(
-        shape = MaterialTheme.shapes.medium,
-        color = if (liked)
-            MaterialTheme.colorScheme.secondaryContainer
-        else
-            MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 0.dp
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            IconButton(
-                onClick = onToggle,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = "Лайк",
-                    tint = iconTint,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .scale(scale)
-                )
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "$likesAmount",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = iconTint
-            )
-        }
-    }
-}
 
 @Composable
 private fun AuthorRow(authorName: String?) {

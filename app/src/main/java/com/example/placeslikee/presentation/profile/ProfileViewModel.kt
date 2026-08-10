@@ -7,10 +7,12 @@ import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.usecase.profile.GetUsersMarkerUseCase
 import com.example.placeslikee.domain.usecase.auth.IsUserLoggedInUseCase
 import com.example.placeslikee.domain.usecase.auth.getCurrentUserUseCase
+import com.example.placeslikee.domain.usecase.likes.ToggleLikedUseCase
 import com.example.placeslikee.domain.usecase.profile.ChangeUserEmailUseCase
 import com.example.placeslikee.domain.usecase.profile.DeleteMarkerUseCase
 import com.example.placeslikee.domain.usecase.profile.SyncAuthDataUseCase
 import com.example.placeslikee.domain.usecase.profile.changeUserNameUseCase
+import com.example.placeslikee.presentation.favourite.FavouriteState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +33,8 @@ class ProfileViewModel @Inject constructor(
     private val getCurrentUserUseCase: getCurrentUserUseCase,
     private val deleteMarkerUseCase: DeleteMarkerUseCase,
     private val changeUserEmailUseCase: ChangeUserEmailUseCase,
-    private val syncAuthDataUseCase: SyncAuthDataUseCase
+    private val syncAuthDataUseCase: SyncAuthDataUseCase,
+    private val toggleLikedUseCase: ToggleLikedUseCase
 ) : ViewModel() {
     private val _state = MutableStateFlow<ProfileState>(ProfileState.Idle)
     val state = _state.asStateFlow()
@@ -39,9 +42,11 @@ class ProfileViewModel @Inject constructor(
     private val _uiEvent = Channel<ProfileUiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
-
     private val _isEmailChanging = MutableStateFlow(false)
     val isEmailChanging = _isEmailChanging.asStateFlow()
+
+    private val _selectedMarker = MutableStateFlow<UIMarker?>(null)
+    val selectedMarker =_selectedMarker.asStateFlow()
 
     //Search query
     private val _inputQuery = MutableStateFlow("")
@@ -136,6 +141,22 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun onMarkerClick(id: String){
+        if(_state.value is ProfileState.Success){
+            val marker = (state.value as ProfileState.Success).markersList.find { it.id == id }
+            _selectedMarker.value = marker
+        }
+    }
+
+    fun dismissMarkerDetails() {
+        _selectedMarker.value = null
+    }
+
+    fun onToggleLike(markerId: String){
+        viewModelScope.launch {
+            toggleLikedUseCase(markerId)
+        }
+    }
     fun updateInputQuery(query: String){
         _inputQuery.value = query
         if(query.isEmpty()){

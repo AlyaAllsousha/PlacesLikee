@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.placeslikee.presentation.common.DropdownSearchResults
 import com.example.placeslikee.presentation.common.LoadingBox
+import com.example.placeslikee.presentation.common.MarkerItem
 import com.example.placeslikee.presentation.common.SearchBar
 import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 
@@ -158,8 +159,11 @@ fun FavouriteScreen(
                                     items = markers,
                                     key = { it.id }
                                 ) { marker ->
-                                    FavouriteMarkerItem(
+                                    MarkerItem(
                                         marker = marker,
+                                        onLikeClick = {
+                                            viewModel.onToggleLike(marker.id)
+                                        },
                                         onClick = {
                                             keyboardController?.hide()
                                             focusManager.clearFocus()

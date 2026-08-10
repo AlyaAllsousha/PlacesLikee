@@ -59,8 +59,10 @@ import com.example.placeslikee.R
 import com.example.placeslikee.presentation.common.LoadingBox
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.input.pointer.pointerInput
 
@@ -72,6 +74,7 @@ import com.example.placeslikee.presentation.common.CustomSnackbar
 import com.example.placeslikee.presentation.common.DropdownSearchResults
 import com.example.placeslikee.presentation.common.OverlayColumn
 import com.example.placeslikee.presentation.common.SearchBar
+import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 import com.example.placeslikee.presentation.profile.dialogs.EditEmailDialog
 import com.example.placeslikee.presentation.profile.dialogs.EditNameDialog
 
@@ -86,6 +89,7 @@ fun ProfileScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val isEmailChanging by viewModel.isEmailChanging.collectAsState()
+    val selectedMarker by viewModel.selectedMarker.collectAsState()
 
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showEditEmailDialog by remember { mutableStateOf(false) }
@@ -103,6 +107,9 @@ fun ProfileScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         rememberTopAppBarState()
+    )
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
     )
 
     LaunchedEffect(isImeVisible) {
@@ -285,8 +292,7 @@ fun ProfileScreen(
                             Box(
                                 modifier = Modifier
                                     .padding(horizontal = 16.dp)
-                                    .clickable {
-                                    }
+
                             ) {
                                 MarkerItem(
                                     marker = marker,
@@ -294,7 +300,11 @@ fun ProfileScreen(
                                     onEditClick = {
                                         onNavigateToEdit(marker.id)
                                     },
-                                    onDeleteClick = { viewModel.deleteMarker(marker.id) }
+                                    onDeleteClick = { viewModel.deleteMarker(marker.id) },
+                                    onMarkerClick = {
+                                        viewModel.onMarkerClick(marker.id)
+                                    },
+                                    onLikeClick = {viewModel.onToggleLike(marker.id)},
                                 )
                             }
                         }
@@ -341,6 +351,17 @@ fun ProfileScreen(
         }
     }
 }
+    selectedMarker?.let { marker ->
+        ModalBottomSheet(
+            onDismissRequest = {
+                viewModel.dismissMarkerDetails()
+            },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            MarkerDetailsContent(markerId = marker.id)
+        }
+    }
 }
 
 @Composable

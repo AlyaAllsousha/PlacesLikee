@@ -96,8 +96,10 @@ class MapViewModel @Inject constructor(
                     if(filteredPoint.isEmpty() && query.isNotBlank()){
                         _snackbarMessage.send("Ничего не найдено")
                     }
-                _mapState.value = _mapState.value.copy(points = filteredPoint, isLoading = false)
-
+                else {
+                        _mapState.value =
+                            _mapState.value.copy(points = filteredPoint, isLoading = false)
+                    }
             }
         }
     }

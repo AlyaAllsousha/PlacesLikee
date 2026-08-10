@@ -3,6 +3,7 @@ package com.example.placeslikee.presentation.main
 import android.graphics.Paint
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -31,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
@@ -63,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,8 +76,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.room.util.TableInfo
 import androidx.room.util.query
+import com.example.placeslikee.R
 import com.example.placeslikee.domain.models.NewMarkerIfo
 import com.example.placeslikee.presentation.common.SearchBar
+import com.example.placeslikee.presentation.list.ListScreen
 import com.example.placeslikee.presentation.map.MapScreen
 import kotlinx.coroutines.launch
 
@@ -89,6 +94,7 @@ fun MainScreen(
 ) {
     val user by viewModel.currentUser.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val isMapView by viewModel.isMapView.collectAsState()
 
     val inputQuery by viewModel.inputQuery.collectAsState()
     val appliedQuery by viewModel.appliedQuery.collectAsState()
@@ -118,12 +124,12 @@ fun MainScreen(
 
     Scaffold(
         modifier = Modifier
-            .pointerInput(Unit){
-            detectTapGestures(onTap = {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-            })
-        },
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                })
+            },
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             MainTopBar(
@@ -143,88 +149,131 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            SearchBar(
-                query = inputQuery,
-                onQueryChange = viewModel::updateInputQuery,
-                onSearchClick = {
-                    focusManager.clearFocus()
-                    keyboardController?.hide()
-                    viewModel.applySearch()},
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .padding(top = 8.dp, bottom = 12.dp)
-            )
-
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (isMapVisible) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 16.dp)
-                            .clip(MaterialTheme.shapes.large)
-                    ) {
-                        MapScreen(
-                            searchQuery = appliedQuery,
-                            onNavigateToAuth = { navigateSafely { onNavigateToAuth() } },
-                            onNavigateToCreateMarker = {
-                                navigateSafely {
-                                    onNavigateToCreateMarker(it)
-                                }
-                            },
-                            onMapClick = {
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-                            }
+                    .padding(top = 8.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SearchBar(
+                    query = inputQuery,
+                    onQueryChange = viewModel::updateInputQuery,
+                    onSearchClick = {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        viewModel.applySearch()
+                    },
+                    modifier = Modifier
+                        .padding(top = 8.dp, bottom = 12.dp)
+                        .weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                FilledIconButton(
+                    onClick = {
+                        viewModel.toggleIsMap()
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                    },
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    if (isMapView) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.List,
+                            contentDescription = "Показать список"
                         )
-
-                        RefreshButton(
-                            isRefreshing = isRefreshing,
-                            onClick = { viewModel.refresh() },
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(12.dp)
+                    } else {
+                        Icon(
+                            painter = painterResource(R.drawable.round_map_24),
+                            contentDescription = "Показать карту"
                         )
                     }
                 }
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != appliedQuery,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .heightIn(max = 250.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        shadowElevation = 8.dp
-                    ) {
-                        LazyColumn {
-                            items(searchResults) { marker ->
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            focusManager.clearFocus()
-                                            keyboardController?.hide()
-                                            viewModel.selectPlace(marker.name)
-                                        }
-                                        .padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = marker.name,
-                                        fontWeight = FontWeight.Bold,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = "от ${marker.authorName}",
-                                        softWrap = false,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+            }
 
+            Crossfade(targetState = isMapView, label = "map_list_toggle") { showMap ->
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if(showMap) {
+                        isMapVisible = true
+                        if (isMapVisible) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp)
+                                    .padding(bottom = 16.dp)
+                                    .clip(MaterialTheme.shapes.large)
+                            ) {
+                                MapScreen(
+                                    searchQuery = appliedQuery,
+                                    onNavigateToAuth = { navigateSafely { onNavigateToAuth() } },
+                                    onNavigateToCreateMarker = {
+                                        navigateSafely {
+                                            onNavigateToCreateMarker(it)
+                                        }
+                                    },
+                                    onMapClick = {
+                                        focusManager.clearFocus()
+                                        keyboardController?.hide()
+                                    }
+                                )
+
+                                RefreshButton(
+                                    isRefreshing = isRefreshing,
+                                    onClick = { viewModel.refresh() },
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(12.dp)
+                                )
+                            }
+                        }
+                    }
+                    else{
+                        isMapVisible = false
+                        ListScreen(searchQuery = appliedQuery)
+                    }
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != appliedQuery,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .heightIn(max = 250.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            shadowElevation = 8.dp
+                        ) {
+                            LazyColumn {
+                                items(searchResults) { marker ->
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                focusManager.clearFocus()
+                                                keyboardController?.hide()
+                                                viewModel.selectPlace(marker.name)
+                                            }
+                                            .padding(16.dp)
+                                    ) {
+                                        Text(
+                                            text = marker.name,
+                                            fontWeight = FontWeight.Bold,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "от ${marker.authorName}",
+                                            softWrap = false,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                }
                             }
                         }
                     }
@@ -345,7 +394,6 @@ private fun MainTopBar(
         }
     }
 }
-
 
 
 @Composable

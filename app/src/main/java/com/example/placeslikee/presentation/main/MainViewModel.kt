@@ -39,6 +39,10 @@ class MainViewModel @Inject constructor(
     private val _appliedQuery = MutableStateFlow("")
     val appliedQuery = _appliedQuery.asStateFlow()
 
+    private val _isMapView = MutableStateFlow(true)
+    val isMapView = _isMapView.asStateFlow()
+
+
     val searchResults = combine(
         getMapMarkerUseCase(),
         _inputQuery
@@ -78,6 +82,10 @@ class MainViewModel @Inject constructor(
     fun selectPlace(title: String) {
         _inputQuery.value = title
         _appliedQuery.value = title
+    }
+
+    fun toggleIsMap(){
+        _isMapView.value = !_isMapView.value
     }
 
     fun logout() {
