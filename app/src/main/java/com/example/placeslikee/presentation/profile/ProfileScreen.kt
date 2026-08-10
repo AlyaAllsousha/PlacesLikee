@@ -1,6 +1,7 @@
 package com.example.placeslikee.presentation.profile
 
 import android.R.attr.onClick
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,13 +11,17 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -58,26 +63,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.modifier.modifierLocalOf
-import androidx.compose.ui.platform.LocalConfiguration
+
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
-import androidx.room.util.query
+
 import com.example.placeslikee.presentation.common.CustomSnackbar
 import com.example.placeslikee.presentation.common.DropdownSearchResults
+import com.example.placeslikee.presentation.common.OverlayColumn
 import com.example.placeslikee.presentation.common.SearchBar
-import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 import com.example.placeslikee.presentation.profile.dialogs.EditEmailDialog
 import com.example.placeslikee.presentation.profile.dialogs.EditNameDialog
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
@@ -99,12 +97,19 @@ fun ProfileScreen(
 
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    var searchBarHeight by remember { mutableIntStateOf(0) }
+    val isImeVisible = WindowInsets.isImeVisible
+
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         rememberTopAppBarState()
     )
+
+    LaunchedEffect(isImeVisible) {
+        if (!isImeVisible) {
+            focusManager.clearFocus()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { message ->
@@ -197,20 +202,6 @@ fun ProfileScreen(
             ) { paddingValues ->
 
 
-                UserInfoCard(
-                        name = user.name,
-                        email = user.email,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        onEditNameClick = { showEditNameDialog = true },
-                        onEditEmailClick = { showEditEmailDialog = true }
-                    )
-
-
-                    SectionHeader(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        markersCount = markers.size
-                    )
-
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -221,130 +212,135 @@ fun ProfileScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    stickyHeader {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.background)
-                                .onSizeChanged { searchBarHeight = it.height }
-                        ) {
-
-                            SearchBar(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .padding(top = 4.dp, bottom = 8.dp),
-                                query = inputQuery,
-                                onQueryChange = viewModel::updateInputQuery,
-                                onSearchClick = {
-                                    focusManager.clearFocus()
-                                    keyboardController?.hide()
-                                    viewModel.applySearch()
-                                }
-                            )
-                            Popup(
-                                alignment = Alignment.TopStart,
-                                offset = IntOffset(x = 0, y = searchBarHeight),
-
-                                properties = PopupProperties(
-                                    focusable = false,
-                                    clippingEnabled = false
-                                )
-                            ) {
-                                val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-
-                                Box(modifier = Modifier.width(screenWidth)) {
-                                    DropdownSearchResults(
-                                        visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != applyQuery,
-                                        results = searchResults,
-                                        onItemClick = { markerName ->
-                                            focusManager.clearFocus()
-                                            keyboardController?.hide()
-                                            viewModel.selectPlace(markerName)
-                                        }
-                                    )
-                                }
-                            }
-
-                        }
+                    item {
+                        UserInfoCard(
+                            name = user.name,
+                            email = user.email,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            onEditNameClick = { showEditNameDialog = true },
+                            onEditEmailClick = { showEditEmailDialog = true }
+                        )
                     }
 
-                    if (markers.isEmpty() && inputQuery.isBlank()) {
+                    item {
+                        SectionHeader(
+                            modifier = Modifier.padding(horizontal = 16.dp).zIndex(1f),
+                            markersCount = markers.size
+                        )
+                    }
+                    stickyHeader {
+                        OverlayColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .zIndex(10f)
+                                .background(MaterialTheme.colorScheme.background),
+                            content = {
+                                SearchBar(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                        .padding(top = 4.dp, bottom = 8.dp),
+                                    query = inputQuery,
+                                    onQueryChange = viewModel::updateInputQuery,
+                                    onSearchClick = {
+                                        focusManager.clearFocus()
+                                        keyboardController?.hide()
+                                        viewModel.applySearch()
+                                    }
+                                )
+                            },
+                            overlay = {
+                                DropdownSearchResults(
+                                    visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != applyQuery,
+                                    results = searchResults,
+                                    onItemClick = { markerName ->
+                                        focusManager.clearFocus()
+                                        keyboardController?.hide()
+                                        viewModel.selectPlace(markerName)
+                                    }
+                                )
+                            }
+                        )
+                    }
+
+
+
+                if (markers.isEmpty() && inputQuery.isBlank()) {
+                    item {
+                        EmptyMarkersPlaceholder(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            title = "Нет добавленных мест"
+                        )
+                    }
+                } else {
+                    if (searchResults.isEmpty() && !applyQuery.isBlank()) {
                         item {
                             EmptyMarkersPlaceholder(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                title = "Нет добавленных мест"
+                                title = "Ничего не найдено"
                             )
                         }
                     } else {
-                        if (searchResults.isEmpty() && !applyQuery.isBlank()) {
-                            item {
-                                EmptyMarkersPlaceholder(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    title = "Ничего не найдено"
-                                )
-                            }
-                        } else {
-                            items(items = markers, key = { it.id }) { marker ->
-                                Box(
-                                    modifier = Modifier
-                                        .padding(horizontal = 16.dp)
-                                        .clickable {
-                                        }
-                                ) {
-                                    MarkerItem(
-                                        marker = marker,
+                        items(items = markers, key = { it.id }) { marker ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .clickable {
+                                    }
+                            ) {
+                                MarkerItem(
+                                    marker = marker,
 
-                                        onEditClick = {
-                                            onNavigateToEdit(marker.id)
-                                        },
-                                        onDeleteClick = { viewModel.deleteMarker(marker.id) }
-                                    )
-                                }
+                                    onEditClick = {
+                                        onNavigateToEdit(marker.id)
+                                    },
+                                    onDeleteClick = { viewModel.deleteMarker(marker.id) }
+                                )
                             }
                         }
                     }
-
                 }
 
-                AnimatedVisibility(
-                    visible = showEditNameDialog,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    EditNameDialog(
-                        currentName = user.name,
-                        onDismiss = { showEditNameDialog = false },
-                        onConfirm = { newName ->
-                            viewModel.onChangeUserInfo(newName)
-                            showEditNameDialog = false
-                        }
-                    )
-                }
+            }
 
-                AnimatedVisibility(
-                    visible = showEditEmailDialog,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    EditEmailDialog(
-                        currentEmail = user.email,
-                        onDismiss = {
-                            showEditEmailDialog = false
-                            emailDialogServerError = null
-                        },
-                        isLoading = isEmailChanging,
-                        serverError = emailDialogServerError,
-                        onClearError = { emailDialogServerError = null },
-                        onConfirm = { newEmail, password ->
-                            emailDialogServerError = null
-                            viewModel.onChangeEmail(newEmail, password)
-                        }
-                    )
-                }
+            AnimatedVisibility(
+                visible = showEditNameDialog,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                EditNameDialog(
+                    currentName = user.name,
+                    onDismiss = { showEditNameDialog = false },
+                    onConfirm = { newName ->
+                        viewModel.onChangeUserInfo(newName)
+                        showEditNameDialog = false
+                    }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = showEditEmailDialog,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                EditEmailDialog(
+                    currentEmail = user.email,
+                    onDismiss = {
+                        showEditEmailDialog = false
+                        emailDialogServerError = null
+                    },
+                    isLoading = isEmailChanging,
+                    serverError = emailDialogServerError,
+                    onClearError = { emailDialogServerError = null },
+                    onConfirm = { newEmail, password ->
+                        emailDialogServerError = null
+                        viewModel.onChangeEmail(newEmail, password)
+                    }
+                )
             }
         }
     }
+}
 }
 
 @Composable
