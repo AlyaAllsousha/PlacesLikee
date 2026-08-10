@@ -2,6 +2,7 @@ package com.example.placeslikee.presentation.favourite
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.placeslikee.presentation.common.DropdownSearchResults
 import com.example.placeslikee.presentation.common.LoadingBox
 import com.example.placeslikee.presentation.common.SearchBar
 import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
@@ -76,7 +79,14 @@ fun FavouriteScreen(
     )
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .pointerInput(Unit){
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                })
+            },
         topBar = {
             TopAppBar(
                 title = {
@@ -147,7 +157,11 @@ fun FavouriteScreen(
                                 ) { marker ->
                                     FavouriteMarkerItem(
                                         marker = marker,
-                                        onClick = { viewModel.onMarkerClick(marker.id) }
+                                        onClick = {
+                                            keyboardController?.hide()
+                                            focusManager.clearFocus()
+                                            viewModel.onMarkerClick(marker.id)
+                                        }
                                     )
                                 }
                             }
@@ -160,49 +174,16 @@ fun FavouriteScreen(
                         )
                     }
                 }
-                androidx.compose.animation.AnimatedVisibility(
+                DropdownSearchResults(
                     visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != appliedQuery,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .heightIn(max = 250.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        shadowElevation = 8.dp,
-                        color = MaterialTheme.colorScheme.surface
-                    ) {
-                        LazyColumn {
-                            items(searchResults) { marker ->
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            focusManager.clearFocus()
-                                            keyboardController?.hide()
-                                            viewModel.selectPlace(marker.name)
-                                        }
-                                        .padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = marker.name,
-                                        fontWeight = FontWeight.Bold,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = "от ${marker.authorName}",
-                                        softWrap = false,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                            }
-                        }
-
+                    results = searchResults,
+                    modifier = Modifier.align (Alignment.TopCenter),
+                    onItemClick = {markerName ->
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        viewModel.selectPlace(markerName)
                     }
-                }
+                )
             }
         }
     }

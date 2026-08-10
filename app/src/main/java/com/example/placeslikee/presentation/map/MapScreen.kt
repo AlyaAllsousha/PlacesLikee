@@ -77,6 +77,7 @@ fun MapScreen(
     onNavigateToAuth: () -> Unit,
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
     searchQuery: String = "",
+    onMapClick: () -> Unit = {}
 ) {
     val state by viewModel.mapState.collectAsState()
 
@@ -100,7 +101,9 @@ fun MapScreen(
 
     val inputListener = remember {
         object : InputListener {
-            override fun onMapTap(p0: Map, p1: Point) {}
+            override fun onMapTap(p0: Map, p1: Point) {
+                onMapClick()
+            }
             override fun onMapLongTap(p0: Map, p1: Point) {
                 viewModel.onMapClick(MapEvent.OnMapLongClick(p1.latitude, p1.longitude))
 

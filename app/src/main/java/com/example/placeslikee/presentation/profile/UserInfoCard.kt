@@ -36,11 +36,12 @@ import androidx.compose.ui.unit.dp
 fun UserInfoCard(
     name: String,
     email: String,
+    modifier: Modifier = Modifier,
     onEditNameClick: () -> Unit,
     onEditEmailClick: () -> Unit
 ) {
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.elevatedCardColors(

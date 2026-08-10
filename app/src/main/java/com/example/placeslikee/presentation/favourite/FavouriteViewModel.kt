@@ -43,8 +43,8 @@ class FavouriteViewModel @Inject constructor(
         } else {
             val lowerQuery = query.lowercase()
             markers.filter {
-                it.name.lowercase().contains(lowerQuery, ignoreCase = true) ||
-                        (it.authorName ?: "Неизвестный").lowercase().contains(lowerQuery, ignoreCase = true)
+                it.name.lowercase().contains(lowerQuery) ||
+                        (it.authorName ?: "").lowercase().contains(lowerQuery)
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

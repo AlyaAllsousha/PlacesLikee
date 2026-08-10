@@ -1,8 +1,12 @@
 package com.example.placeslikee.presentation.profile
 
+import android.R.attr.onClick
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,11 +16,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +56,24 @@ import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.modifier.modifierLocalOf
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.zIndex
+import androidx.room.util.query
 import com.example.placeslikee.presentation.common.CustomSnackbar
+import com.example.placeslikee.presentation.common.DropdownSearchResults
+import com.example.placeslikee.presentation.common.SearchBar
+import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 import com.example.placeslikee.presentation.profile.dialogs.EditEmailDialog
 import com.example.placeslikee.presentation.profile.dialogs.EditNameDialog
 
@@ -67,6 +93,14 @@ fun ProfileScreen(
     var showEditEmailDialog by remember { mutableStateOf(false) }
     var emailDialogServerError by remember { mutableStateOf<String?>(null) }
 
+    val inputQuery by viewModel.inputQuery.collectAsState()
+    val applyQuery by viewModel.appliedQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
+
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var searchBarHeight by remember { mutableIntStateOf(0) }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         rememberTopAppBarState()
@@ -74,7 +108,7 @@ fun ProfileScreen(
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { message ->
-            when(message){
+            when (message) {
                 is ProfileUiEvent.NameChanged -> {
                     launch {
                         snackbarHostState.showSnackbar(
@@ -84,15 +118,14 @@ fun ProfileScreen(
                 }
 
                 is ProfileUiEvent.EmailChangeEmailSent -> {
-                    if(message.result.isSuccess){
+                    if (message.result.isSuccess) {
                         showEditEmailDialog = false
                         launch {
                             snackbarHostState.showSnackbar(
                                 "Письмо с подтверждением отправлено на новую почту!"
                             )
                         }
-                    }
-                    else{
+                    } else {
                         emailDialogServerError =
                             viewModel.mapErrorToMessage(message.result.exceptionOrNull()?.message)
                     }
@@ -117,7 +150,8 @@ fun ProfileScreen(
     }
     when (state) {
         ProfileState.Idle,
-        ProfileState.Unauthorized -> Unit
+        ProfileState.Unauthorized -> {
+        }
 
         ProfileState.Loading -> LoadingBox()
 
@@ -126,7 +160,15 @@ fun ProfileScreen(
             val user = (state as ProfileState.Success).user
 
             Scaffold(
-                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                modifier = Modifier
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        })
+                    },
+
                 topBar = {
                     TopAppBar(
                         title = {
@@ -144,56 +186,132 @@ fun ProfileScreen(
                     )
                 },
                 snackbarHost = {
-                    SnackbarHost(hostState = snackbarHostState){snackbarData ->
+                    SnackbarHost(hostState = snackbarHostState) { snackbarData ->
                         CustomSnackbar(
-                            snackbarData = snackbarData)
+                            snackbarData = snackbarData
+                        )
 
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.background
             ) { paddingValues ->
 
+
+                UserInfoCard(
+                        name = user.name,
+                        email = user.email,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        onEditNameClick = { showEditNameDialog = true },
+                        onEditEmailClick = { showEditEmailDialog = true }
+                    )
+
+
+                    SectionHeader(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        markersCount = markers.size
+                    )
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                     contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
                         top = 8.dp,
                         bottom = 32.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    item {
-                        UserInfoCard(
-                            name = user.name,
-                            email = user.email,
-                            onEditNameClick = { showEditNameDialog = true },
-                            onEditEmailClick = { showEditEmailDialog = true }
-                        )
-                    }
+                    stickyHeader {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.background)
+                                .onSizeChanged { searchBarHeight = it.height }
+                        ) {
 
-                    item {
-                        SectionHeader(markersCount = markers.size)
-                    }
-
-                    if (markers.isEmpty()) {
-                        item { EmptyMarkersPlaceholder() }
-                    } else {
-                        items(items = markers, key = { it.id }) { marker ->
-                            MarkerItem(
-                                marker = marker,
-                                onEditClick = {
-                                    onNavigateToEdit(marker.id)
-                                },
-                                onDeleteClick = { viewModel.deleteMarker(marker.id) }
+                            SearchBar(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .padding(top = 4.dp, bottom = 8.dp),
+                                query = inputQuery,
+                                onQueryChange = viewModel::updateInputQuery,
+                                onSearchClick = {
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                    viewModel.applySearch()
+                                }
                             )
+                            Popup(
+                                alignment = Alignment.TopStart,
+                                offset = IntOffset(x = 0, y = searchBarHeight),
+
+                                properties = PopupProperties(
+                                    focusable = false,
+                                    clippingEnabled = false
+                                )
+                            ) {
+                                val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+
+                                Box(modifier = Modifier.width(screenWidth)) {
+                                    DropdownSearchResults(
+                                        visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != applyQuery,
+                                        results = searchResults,
+                                        onItemClick = { markerName ->
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                            viewModel.selectPlace(markerName)
+                                        }
+                                    )
+                                }
+                            }
+
                         }
                     }
+
+                    if (markers.isEmpty() && inputQuery.isBlank()) {
+                        item {
+                            EmptyMarkersPlaceholder(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                title = "Нет добавленных мест"
+                            )
+                        }
+                    } else {
+                        if (searchResults.isEmpty() && !applyQuery.isBlank()) {
+                            item {
+                                EmptyMarkersPlaceholder(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    title = "Ничего не найдено"
+                                )
+                            }
+                        } else {
+                            items(items = markers, key = { it.id }) { marker ->
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .clickable {
+                                        }
+                                ) {
+                                    MarkerItem(
+                                        marker = marker,
+
+                                        onEditClick = {
+                                            onNavigateToEdit(marker.id)
+                                        },
+                                        onDeleteClick = { viewModel.deleteMarker(marker.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                 }
 
-                AnimatedVisibility(visible = showEditNameDialog, enter = fadeIn(), exit = fadeOut()) {
+                AnimatedVisibility(
+                    visible = showEditNameDialog,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
                     EditNameDialog(
                         currentName = user.name,
                         onDismiss = { showEditNameDialog = false },
@@ -204,7 +322,11 @@ fun ProfileScreen(
                     )
                 }
 
-                AnimatedVisibility(visible = showEditEmailDialog, enter = fadeIn(), exit = fadeOut()) {
+                AnimatedVisibility(
+                    visible = showEditEmailDialog,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
                     EditEmailDialog(
                         currentEmail = user.email,
                         onDismiss = {
@@ -226,9 +348,12 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun SectionHeader(markersCount: Int) {
+private fun SectionHeader(
+    modifier: Modifier = Modifier,
+    markersCount: Int
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(top = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -257,9 +382,12 @@ private fun SectionHeader(markersCount: Int) {
 }
 
 @Composable
-fun EmptyMarkersPlaceholder() {
+fun EmptyMarkersPlaceholder(
+    modifier: Modifier = Modifier,
+    title: String,
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -283,7 +411,7 @@ fun EmptyMarkersPlaceholder() {
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Нет добавленных мест",
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
