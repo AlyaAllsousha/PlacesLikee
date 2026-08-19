@@ -19,7 +19,7 @@ class MarkerDetailsViewModel @AssistedInject constructor(
     @Assisted private val markerId: String,
     private val toggleLikedUseCase: ToggleLikedUseCase,
     private val getMarkerByIdUseCase: GetMarkerByIdUseCase
-): ViewModel() {
+) : ViewModel() {
 
     @AssistedFactory
     interface Factory {
@@ -29,17 +29,31 @@ class MarkerDetailsViewModel @AssistedInject constructor(
     private val _markerDetails = MutableStateFlow<DetailsState>(DetailsState.Idle)
     val markerDetails = _markerDetails.asStateFlow()
 
-    init{
+    //Defence from liking spam
+    private var isLiking = false
+    private var lastClickTime = 0L
+
+    init {
         viewModelScope.launch {
             _markerDetails.value = DetailsState.Loading
-            getMarkerByIdUseCase(markerId).collect{details ->
+            getMarkerByIdUseCase(markerId).collect { details ->
                 _markerDetails.value = DetailsState.Success(details)
             }
         }
     }
-    fun onToggleLike(){
+
+    fun onToggleLike() {
+        val currentTime = System.currentTimeMillis()
+        if (isLiking || currentTime - lastClickTime < 500) return
+        isLiking = true
+        lastClickTime = currentTime
         viewModelScope.launch {
-            toggleLikedUseCase(markerId)
+            try {
+                toggleLikedUseCase(markerId)
+            }
+            finally {
+                isLiking = false
+            }
         }
     }
 }

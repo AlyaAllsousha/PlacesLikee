@@ -84,6 +84,9 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.googleid)
 
+    //Image storage server (Cloudinary)
+    implementation("com.cloudinary:cloudinary-android:2.5.0")
+
     //WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.hilt:hilt-work:1.2.0")

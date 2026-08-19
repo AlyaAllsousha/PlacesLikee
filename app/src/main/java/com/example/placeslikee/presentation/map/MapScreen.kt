@@ -280,7 +280,7 @@ fun MapScreen(
                         scope.launch {
                             snackbarHostState.currentSnackbarData?.dismiss()
                             snackbarHostState.showSnackbar(
-                                message = "Ишем ваше местоположение...",
+                                message = "Ищем ваше местоположение...",
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -355,6 +355,70 @@ fun MapScreen(
 
         }
     }
+
+    LaunchedEffect(Unit) {
+        viewModel.cameraCommands.collect { command ->
+            val map = mapView.mapWindow.map
+
+            when (command) {
+                is CameraCommand.MoveTo -> {
+                    val targetPoint = Point(command.lat, command.lon)
+                    val finalZoom = maxOf(map.cameraPosition.zoom, command.zoom)
+
+                    if(command.animate) {
+                        map.move(
+                            CameraPosition(targetPoint, finalZoom, 0.0f, 0.0f),
+                            Animation(Animation.Type.SMOOTH, 0.5f),
+                            null
+                        )
+                    }
+                    else{
+                        map.move( CameraPosition(targetPoint, finalZoom, 0.0f, 0.0f))
+                    }
+                }
+
+                is CameraCommand.FitBounds -> {
+                    val points = command.points
+                    if (points.isEmpty()) return@collect
+                    if (points.size == 1) {
+                        val point = points.first()
+                        map.move(
+                            CameraPosition(Point(point.latitude, point.longitude), 16.0f, 0.0f, 0.0f),
+                            Animation(Animation.Type.SMOOTH, 1f),
+                            null
+                        )
+                    } else {
+                        val minLat = points.minBy { it.latitude }.latitude
+                        val maxLat = points.maxBy { it.latitude }.latitude
+                        val minLon = points.minBy { it.longitude }.longitude
+                        val maxLon = points.maxBy { it.longitude }.longitude
+
+                        if (minLat == maxLat && minLon == maxLon) {
+                            map.move(
+                                CameraPosition(Point(minLat, minLon), 16.0f, 0.0f, 0.0f),
+                                Animation(Animation.Type.SMOOTH, 1f),
+                                null
+                            )
+                            return@collect
+                        }
+
+                        val boundingBox = BoundingBox(Point(minLat, minLon), Point(maxLat, maxLon))
+                        var cameraPos = map.cameraPosition(Geometry.fromBoundingBox(boundingBox))
+
+                        val paddedZoom = (cameraPos.zoom - 0.5f).coerceAtLeast(0f)
+                        cameraPos = CameraPosition(cameraPos.target, paddedZoom, cameraPos.azimuth, cameraPos.tilt)
+
+                        map.move(
+                            cameraPos,
+                            Animation(Animation.Type.SMOOTH, 1.2f),
+                            null
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     LaunchedEffect(selectedMarker) {
         val newSelectedId = selectedMarker?.id
         previousSelectedId?.let { oldId ->
@@ -396,53 +460,7 @@ fun MapScreen(
         }
         previousSelectedId = newSelectedId
     }
-    LaunchedEffect(state.points, searchQuery) {
-        if (searchQuery.isNotBlank() && state.points.isNotEmpty()) {
-            val map = mapView.mapWindow.map
 
-            if (state.points.size == 1) {
-                val point = state.points.first()
-                val targetPoint = Point(point.latitude, point.longitude)
-                map.move(
-                    CameraPosition(targetPoint, 16.0f, 0.0f, 0.0f),
-                    Animation(Animation.Type.SMOOTH, 1f),
-                    null
-                )
-            } else {
-                val minLat = state.points.minBy { it.latitude }.latitude
-                val maxLat = state.points.maxBy { it.latitude }.latitude
-                val minLon = state.points.minBy { it.longitude }.longitude
-                val maxLon = state.points.maxBy { it.longitude }.longitude
-
-                if (minLat == maxLat && minLon == maxLon) {
-                    map.move(
-                        CameraPosition(Point(minLat, minLon), 16.0f, 0.0f, 0.0f),
-                        Animation(Animation.Type.SMOOTH, 1f),
-                        null
-                    )
-                    return@LaunchedEffect
-                }
-                val southWest = Point(minLat, minLon)
-                val northEast = Point(maxLat, maxLon)
-
-                val boundingBox = BoundingBox(southWest, northEast)
-                var cameraPos = map.cameraPosition(Geometry.fromBoundingBox(boundingBox))
-
-                val paddedZoom = (cameraPos.zoom - 0.5f).coerceAtLeast(0f)
-                cameraPos = CameraPosition(
-                    cameraPos.target,
-                    paddedZoom,
-                    cameraPos.azimuth,
-                    cameraPos.tilt
-                )
-                map.move(
-                    cameraPos,
-                    Animation(Animation.Type.SMOOTH, 1.2f),
-                    null
-                )
-            }
-        }
-    }
     selectedMarker?.let { marker ->
         ModalBottomSheet(
             onDismissRequest = {

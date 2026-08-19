@@ -32,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -100,7 +101,7 @@ private fun MarkerDetailsBody(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
-        if(marker.image != null) {
+        if (marker.image != null) {
             PhotoSection(imageUrl = marker.image)
         }
         Column(
@@ -125,14 +126,8 @@ private fun MarkerDetailsBody(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                LikeButton(
-                    liked = marker.likedByUser,
-                    likesAmount = marker.likesAmount,
-                    onToggle = onToggleLike
-                )
             }
+
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -168,9 +163,23 @@ private fun MarkerDetailsBody(
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
 
-            AuthorRow(authorName = marker.authorName)
+                AuthorRow(
+                    modifier = Modifier.weight(1f),
+                    authorName = marker.authorName)
 
+                Spacer(modifier = Modifier.width(12.dp))
+
+                LikeButton(
+                    liked = marker.likedByUser,
+                    likesAmount = marker.likesAmount,
+                    onToggle = onToggleLike
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
 
             Button(
@@ -191,7 +200,7 @@ private fun MarkerDetailsBody(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Построить маршрут",
+                    text = "Подписаться на автора",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -261,8 +270,11 @@ private fun PhotoErrorPlaceholder() {
 
 
 @Composable
-private fun AuthorRow(authorName: String?) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun AuthorRow(authorName: String?, modifier: Modifier) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
         Surface(
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primaryContainer,
@@ -278,19 +290,19 @@ private fun AuthorRow(authorName: String?) {
             }
         }
         Spacer(modifier = Modifier.width(10.dp))
-        Column {
-            Text(
-                text = "Автор",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-            Text(
-                text = authorName ?: "Неизвестный",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
+
+        Text(
+            text = authorName ?: "Неизвестный",
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+
+
     }
 }
 

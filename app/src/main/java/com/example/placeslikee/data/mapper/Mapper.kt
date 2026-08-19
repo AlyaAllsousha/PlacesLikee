@@ -69,6 +69,7 @@ fun RemoteUser.toUserEntity(): UserEntity = UserEntity(
     id = id.trim(),
     name = name,
     email = email,
+    syncState = SyncState.SYNCED,
     localTimestamp = remoteTimestamp
 )
 fun UserEntity.toRemoteUser(): RemoteUser = RemoteUser(

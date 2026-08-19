@@ -122,10 +122,11 @@ fun MarkerItem(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                         modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primaryContainer,
@@ -140,13 +141,16 @@ fun MarkerItem(
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = marker.authorName ?: "Аноним",
+                            text = marker.authorName ?: "Неизвестный",
                             style = MaterialTheme.typography.labelMedium,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Rounded.LocationOn,
                             contentDescription = null,

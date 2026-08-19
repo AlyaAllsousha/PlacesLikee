@@ -140,9 +140,11 @@ fun FavouriteScreen(
 
                         if (markers.isEmpty()) {
                             EmptyFavouritesState(
-                                modifier = Modifier.padding(paddingValues)
+                                modifier = Modifier.padding(paddingValues),
+                                title = if(appliedQuery.isBlank()) "Нет понравившихся мест" else "Ничего не найдено"
                             )
-                        } else {
+                        }
+                        else {
                             LazyColumn(
                                 modifier = Modifier
                                     .fillMaxSize(),
@@ -208,7 +210,10 @@ fun FavouriteScreen(
 }
 
 @Composable
-private fun EmptyFavouritesState(modifier: Modifier = Modifier) {
+private fun EmptyFavouritesState(
+    modifier: Modifier = Modifier,
+    title: String
+    ) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -225,7 +230,7 @@ private fun EmptyFavouritesState(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(20.dp))
             Text(
-                text = "Ничего не найдено",
+                text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface

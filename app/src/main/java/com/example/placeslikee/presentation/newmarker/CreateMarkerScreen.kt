@@ -171,7 +171,7 @@ fun CreateMarkerScreen(
                     MarkerTextField(
                         value = description,
                         onValueChange = { description = it },
-                        label = "Описание",
+                        label = "Описание (необязательно)",
                         placeholder = "Расскажите об этом месте...",
                         leadingIcon = rememberVectorPainter(image = Icons.Outlined.Edit),
                         singleLine = false,
@@ -185,7 +185,7 @@ fun CreateMarkerScreen(
                     MarkerTextField(
                         value = image,
                         onValueChange = { image = it },
-                        label = "Ссылка на фото",
+                        label = "Ссылка на фото (необязательно)",
                         placeholder = "https://...",
                         leadingIcon = painterResource( R.drawable.outline_image_24),
                         singleLine = true

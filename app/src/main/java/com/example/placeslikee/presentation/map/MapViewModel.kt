@@ -50,6 +50,10 @@ class MapViewModel @Inject constructor(
     // Saving camera position
     private val _cameraPosition = MutableStateFlow<CameraPosition?>(null)
 
+    //Camera movements
+    private val _cameraCommands = Channel<CameraCommand>(Channel.CONFLATED)
+    val cameraCommands = _cameraCommands.receiveAsFlow()
+
     //Auth navigation
     private val _navigateToAuth = MutableSharedFlow<Unit>()
     val navigateToAuth = _navigateToAuth.asSharedFlow()
@@ -99,6 +103,9 @@ class MapViewModel @Inject constructor(
                 else {
                         _mapState.value =
                             _mapState.value.copy(points = filteredPoint, isLoading = false)
+                        if (query.isNotBlank() && filteredPoint.isNotEmpty()) {
+                            _cameraCommands.trySend(CameraCommand.FitBounds(filteredPoint))
+                        }
                     }
             }
         }
@@ -108,12 +115,16 @@ class MapViewModel @Inject constructor(
     fun onMapClick(event: MapEvent) {
         when (event) {
             is MapEvent.OnMapLongClick -> {
+                _cameraCommands.trySend(CameraCommand.MoveTo(event.lat, event.lon, 16.5f, false))
                 handleLongClick(event.lat, event.lon)
             }
 
             is MapEvent.onPointClick -> {
                 val clickMarker = mapState.value.points.find { it.id == event.pointId }
                 _selectedMarker.value = clickMarker
+                if (clickMarker != null) {
+                    _cameraCommands.trySend(CameraCommand.MoveTo(clickMarker.latitude, clickMarker.longitude, 16.5f))
+                }
             }
         }
     }

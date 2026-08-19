@@ -49,6 +49,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -78,6 +83,7 @@ import androidx.room.util.TableInfo
 import androidx.room.util.query
 import com.example.placeslikee.R
 import com.example.placeslikee.domain.models.NewMarkerIfo
+import com.example.placeslikee.presentation.common.DropdownSearchResults
 import com.example.placeslikee.presentation.common.SearchBar
 import com.example.placeslikee.presentation.list.ListScreen
 import com.example.placeslikee.presentation.map.MapScreen
@@ -109,6 +115,10 @@ fun MainScreen(
 
     val isImeVisible = WindowInsets.isImeVisible
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        rememberTopAppBarState()
+    )
+
     LaunchedEffect(isImeVisible) {
         if (!isImeVisible) {
             focusManager.clearFocus()
@@ -124,6 +134,7 @@ fun MainScreen(
 
     Scaffold(
         modifier = Modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
@@ -139,7 +150,8 @@ fun MainScreen(
                     if (user != null) viewModel.logout()
                     else navigateSafely { onNavigateToAuth() }
                 },
-                isLoggedIn = user != null
+                isLoggedIn = user != null,
+                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
@@ -198,7 +210,7 @@ fun MainScreen(
 
             Crossfade(targetState = isMapView, label = "map_list_toggle") { showMap ->
                 Box(modifier = Modifier.fillMaxSize()) {
-                    if(showMap) {
+                    if (showMap) {
                         isMapVisible = true
                         if (isMapVisible) {
                             Box(
@@ -231,52 +243,20 @@ fun MainScreen(
                                 )
                             }
                         }
-                    }
-                    else{
+                    } else {
                         isMapVisible = false
                         ListScreen(searchQuery = appliedQuery)
                     }
-                    androidx.compose.animation.AnimatedVisibility(
+                    DropdownSearchResults(
                         visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != appliedQuery,
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .heightIn(max = 250.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            shadowElevation = 8.dp
-                        ) {
-                            LazyColumn {
-                                items(searchResults) { marker ->
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                focusManager.clearFocus()
-                                                keyboardController?.hide()
-                                                viewModel.selectPlace(marker.name)
-                                            }
-                                            .padding(16.dp)
-                                    ) {
-                                        Text(
-                                            text = marker.name,
-                                            fontWeight = FontWeight.Bold,
-                                            softWrap = false,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = "от ${marker.authorName}",
-                                            softWrap = false,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-
-                                }
-                            }
+                        results = searchResults,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        onItemClick = { markerName ->
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            viewModel.selectPlace(markerName)
                         }
-                    }
+                    )
                 }
             }
         }
@@ -295,104 +275,106 @@ fun MainScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainTopBar(
     userName: String?,
     isLoggedIn: Boolean,
     onProfileClick: () -> Unit,
-    onAuthClick: () -> Unit
+    onAuthClick: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.large)
-                .clickable(enabled = isLoggedIn, onClick = onProfileClick)
-                .padding(horizontal = 8.dp, vertical = 6.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = if (isLoggedIn)
-                    MaterialTheme.colorScheme.primaryContainer
-                else
-                    MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(38.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    AnimatedContent(
-                        targetState = userName,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        label = "avatar"
-                    ) { name ->
-                        if (name != null) {
-                            Text(
-                                text = name.take(1).uppercase(),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Rounded.Person,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(22.dp)
-                            )
+    TopAppBar(
+        title =
+            {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.large)
+                        .clickable(enabled = isLoggedIn, onClick = onProfileClick)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (isLoggedIn)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            AnimatedContent(
+                                targetState = userName,
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                label = "avatar"
+                            ) { name ->
+                                if (name != null) {
+                                    Text(
+                                        text = name.take(1).uppercase(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Person,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
                         }
                     }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Text(
+                            text = if (isLoggedIn) "Привет," else "Добро пожаловать",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Text(
+                            text = userName ?: "Гость",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isLoggedIn)
+                                MaterialTheme.colorScheme.onSurface
+                            else
+                                MaterialTheme.colorScheme.outline,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
-            }
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Column {
-                Text(
-                    text = if (isLoggedIn) "Привет," else "Добро пожаловать",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-                Text(
-                    text = userName ?: "Гость",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isLoggedIn)
-                        MaterialTheme.colorScheme.onSurface
-                    else
-                        MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = if (!isLoggedIn)
-                MaterialTheme.colorScheme.primary
-            else
-                MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.large)
-                .clickable(onClick = onAuthClick)
-        ) {
-            Text(
-                text = if (isLoggedIn) "Выйти" else "Войти",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
+            },
+        actions = {
+            Surface(
+                shape = MaterialTheme.shapes.large,
                 color = if (!isLoggedIn)
-                    MaterialTheme.colorScheme.onPrimary
+                    MaterialTheme.colorScheme.primary
                 else
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
-            )
-        }
-    }
+                    MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.large)
+                    .clickable(onClick = onAuthClick)
+            ) {
+                Text(
+                    text = if (isLoggedIn) "Выйти" else "Войти",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (!isLoggedIn)
+                        MaterialTheme.colorScheme.onPrimary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
+                )
+            }
+        },
+        scrollBehavior = scrollBehavior
+    )
+
 }
 
 

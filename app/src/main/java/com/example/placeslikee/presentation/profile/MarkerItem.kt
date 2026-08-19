@@ -76,7 +76,7 @@ fun MarkerItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { (onMarkerClick) },
+            .clickable { onMarkerClick() },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

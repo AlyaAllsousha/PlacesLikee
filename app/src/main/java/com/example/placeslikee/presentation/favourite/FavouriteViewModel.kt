@@ -24,6 +24,10 @@ class FavouriteViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<FavouriteState>(FavouriteState.Idle)
     val uiState = _uiState.asStateFlow()
 
+    //Defence from liking spam
+    private var isLiking = false
+    private var lastClickTime = 0L
+
     //Checking whether any marker is chosen
     private val _selectedMarker = MutableStateFlow<UIMarker?>(null)
     val selectedMarker = _selectedMarker.asStateFlow()
@@ -105,8 +109,17 @@ class FavouriteViewModel @Inject constructor(
     }
 
     fun onToggleLike(markerId: String){
+        val currentTime = System.currentTimeMillis()
+        if (isLiking || currentTime - lastClickTime < 500) return
+        isLiking = true
+        lastClickTime = currentTime
         viewModelScope.launch {
-            toggleLikedUseCase(markerId)
+            try {
+                toggleLikedUseCase(markerId)
+            }
+            finally {
+                isLiking = false
+            }
         }
     }
     fun dismissMarkerDetails() {

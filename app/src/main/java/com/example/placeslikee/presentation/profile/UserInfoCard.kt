@@ -72,9 +72,12 @@ fun UserInfoCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
+                modifier = Modifier.weight(1f),
                 text = name,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )
 

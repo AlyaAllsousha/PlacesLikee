@@ -19,9 +19,15 @@ interface UsersDao {
     @Query("SELECT * FROM users_table WHERE id = :id")
     fun getUserByIdFlow(id: String): Flow<UserEntity?>
 
+    @Query("SELECT * FROM users_table")
+    fun getAllUsers(): List<UserEntity>
+
     @Delete
     suspend fun deleteUser(usersEntity: UserEntity)
 
     @Query("DELETE FROM users_table")
     suspend fun deleteAllUsers()
+
+    @Query("UPDATE users_table SET syncState = 'SYNCED' WHERE id = :id")
+    suspend fun markAsSynced(id: String)
 }

@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.placeslikee.data.local.entities.LikesEntity
+import com.example.placeslikee.data.local.entities.SyncState
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerWithAuthor
 import kotlinx.coroutines.flow.Flow
@@ -18,8 +19,8 @@ interface LikesDao {
     @Delete
     suspend fun deleteLike(like: LikesEntity)
 
-    @Query("UPDATE likes_table SET syncState = 'SYNCED' WHERE id = :id")
-    suspend fun markLikeAsSynced(id: String)
+    @Query("UPDATE likes_table SET syncState = 'SYNCED' WHERE id = :id AND syncState = :oldState")
+    suspend fun markLikeAsSynced(id: String, oldState: SyncState)
 
     @Query("UPDATE likes_table SET syncState = 'PENDING_UNLIKED' WHERE id = :id")
     suspend fun markLikeAsUnliked(id: String)

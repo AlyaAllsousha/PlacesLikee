@@ -9,6 +9,7 @@ import com.yandex.mapkit.MapKitFactory
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
+
 @HiltAndroidApp
 class App : Application(), Configuration.Provider {
     @Inject
@@ -28,6 +29,10 @@ class App : Application(), Configuration.Provider {
         syncScheduler.schedulePeriodicSync()
         MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
         MapKitFactory.initialize(this)
+        val config = mapOf(
+            "cloud_name" to "elezs5h0"
+        )
+        //MediaManager.init(this, config)
     }
 
 }

@@ -14,6 +14,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -23,7 +25,11 @@ class LikeRepositoryImpl @Inject constructor(
     private val syncWorkerScheduler: SyncWorkerScheduler
 
 ) : LikeRepository {
+    private val mutex = Mutex()
+
     override suspend fun toggleLikeToMarker(markerId: String) {
+        mutex.withLock {
+
             val userId = auth.currentUser?.uid ?: return
             val likeId = "${markerId}_${userId}"
             val marker = localDB.markersDao().getByIdSynced(markerId) ?: return
@@ -46,20 +52,21 @@ class LikeRepositoryImpl @Inject constructor(
             val updateMarker = marker.mark.copy(
                 likesAmount = newLikeCount,
                 likedByUser = !isCurrentlyLiked,
-                synced = if (isCurrentlyLiked) SyncState.PENDING_UNLIKED else SyncState.PENDING_LIKED,
                 localTimestamp = System.currentTimeMillis()
             )
 
             localDB.markersDao().updateMark(updateMarker)
             syncWorkerScheduler.scheduleSingleSync()
+        }
 
     }
+
     override fun getUsersLikedMarkers(): Flow<List<UIMarker>> {
         val userId = auth.uid ?: return flowOf(emptyList())
         syncWorkerScheduler.scheduleSingleSync()
         return localDB.markersDao().getLikedMarkersByUser(userId).map { markers ->
             markers.map {
-                it.toUIMarker()
+                it.toUIMarker().copy(likedByUser = true)
             }
         }
 

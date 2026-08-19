@@ -4,6 +4,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
 import com.example.placeslikee.data.local.LocalDB
+import com.example.placeslikee.data.local.dao.LikesDao
 import com.example.placeslikee.data.local.dao.MarkerDao
 import com.example.placeslikee.data.local.dao.UsersDao
 import com.example.placeslikee.data.local.entities.SyncState
@@ -15,7 +16,9 @@ import com.example.placeslikee.data.mapper.toRemoteUser
 import com.example.placeslikee.data.mapper.toUserEntity
 import com.example.placeslikee.data.remote.RemoteDB
 import com.example.placeslikee.data.remote.dto.RemoteMarker
+import com.example.placeslikee.data.remote.dto.RemoteUser
 import com.example.placeslikee.domain.repositories.AuthRepository
+import com.example.placeslikee.domain.repositories.LikeRepository
 import com.google.firebase.auth.FirebaseAuth
 import javax.inject.Inject
 import kotlin.collections.iterator
@@ -35,14 +38,15 @@ class MarkersSyncManager @Inject constructor(
         val markerDao = localDB.markersDao()
         val userDao = localDB.usersDao()
         val likesDao = localDB.likesDao()
-
         try {
             val remoteMarkers = remoteDB.getAllMarkers().associateBy { it.id }
-            pullRemoteChanges(markerDao, userDao, remoteMarkers)
-            pushLocalChanges(markerDao, userDao, remoteMarkers)
+            val remoteUsers = remoteDB.getAllUsers().associateBy { it.id }
+
+            pullRemoteChanges(markerDao, userDao, likesDao, remoteMarkers)
+            pushLocalChanges(markerDao, userDao, remoteMarkers, remoteUsers)
 
         } catch (e: Exception) {
-            Log.d("my log", "sync: $e")
+            Log.e("my log", "sync: $e", e)
             throw e
         }
 
@@ -51,7 +55,8 @@ class MarkersSyncManager @Inject constructor(
     private suspend fun pushLocalChanges(
         markersDao: MarkerDao,
         userDao: UsersDao,
-        remoteMarkers: Map<String, RemoteMarker>
+        remoteMarkers: Map<String, RemoteMarker>,
+        remoteUsers: Map<String, RemoteUser>
     ) {
         val unsyncedMarkers = markersDao.getAllMarksForSync()
 
@@ -67,7 +72,6 @@ class MarkersSyncManager @Inject constructor(
                         )
                 }
 
-
                 SyncState.PENDING_DELETE -> {
                     remoteDB.deleteMarker(marker.toRemoteMarker())
                     localDB.markersDao().deleteMark(marker)
@@ -75,7 +79,7 @@ class MarkersSyncManager @Inject constructor(
 
                 SyncState.PENDING_UPDATE -> {
                     if (remoteTimestamp < marker.localTimestamp) {
-                        remoteDB.saveMarker(marker.toRemoteMarker())
+                        remoteDB.updateMarker(marker.toRemoteMarker())
                     }
                 }
 
@@ -91,36 +95,46 @@ class MarkersSyncManager @Inject constructor(
             markersDao.markAsSynced(marker.id)
         }
 
+        val localUsers = userDao.getAllUsers()
         val currUserId = auth.uid
         if (currUserId != null) {
             val currUser = userDao.getUserById(currUserId)
             val remoteUser = remoteDB.getUserById(currUserId)
             if (currUser != null && ((remoteUser?.remoteTimestamp ?: 0L) < currUser.localTimestamp))
                 remoteDB.saveUser(currUser.toRemoteUser())
+
+        }
+        for (user in localUsers) {
+            val existingUser = remoteUsers[user.id]
+            if (user.syncState == SyncState.SYNCED && existingUser == null) {
+                userDao.deleteUser(user)
+            }
         }
 
         val unsyncedLikes = localDB.likesDao().getAllLikesForSync()
 
         for (like in unsyncedLikes) {
-            val existingLike = remoteDB.getLikeById(like.id)
             if (like.syncState == SyncState.PENDING_LIKED) {
-                remoteDB.saveLike(like.toRemoteLike())
-                remoteDB.updateLikesAmount(like.markerId, true)
+                remoteDB.syncLikeTransaction(like.markerId, like.toRemoteLike(), true)
+                localDB.likesDao().markLikeAsSynced(like.id, SyncState.PENDING_LIKED)
             } else if (like.syncState == SyncState.PENDING_UNLIKED) {
-                remoteDB.deleteLike(like.toRemoteLike())
-                remoteDB.updateLikesAmount(like.markerId, false)
+                remoteDB.syncLikeTransaction(like.markerId, like.toRemoteLike(), false)
                 localDB.likesDao().deleteLike(like)
-            } else if (existingLike == null && like.syncState == SyncState.SYNCED) {
-                localDB.likesDao().deleteLike(like)
-            }
-            localDB.likesDao().markLikeAsSynced(like.id)
-        }
 
+            } else if (like.syncState == SyncState.SYNCED) {
+                val existingLike = remoteDB.getLikeById(like.id)
+                if (existingLike == null) {
+                    localDB.likesDao().deleteLike(like)
+                }
+            }
+
+        }
     }
 
     private suspend fun pullRemoteChanges(
         markerDao: MarkerDao,
         userDao: UsersDao,
+        likeDB: LikesDao,
         remoteMarker: Map<String, RemoteMarker>
     ) {
         val remoteUsers = remoteDB.getAllUsers()
@@ -136,14 +150,19 @@ class MarkersSyncManager @Inject constructor(
             if (existingMarker == null || (dto.value.remoteTimestamp
                     ?: 0) > existingMarker.localTimestamp
             ) {
-                markerDao.createMark(dto.value.toMarkerEntity())
+                val newMarkerEntity = dto.value.toMarkerEntity().copy(
+                    likedByUser = existingMarker?.likedByUser ?: false
+                )
+                markerDao.createMark(newMarkerEntity)
             }
         }
         if (auth.uid != null) {
             val remoteLikes = remoteDB.getLikesByUserId(auth.uid!!)
-            for(like in remoteLikes){
-                val existingLike = localDB.likesDao().getLikeById(like.id)
-                if(existingLike == null || (like.remoteTimestamp ?: 0) > existingLike.localTimeStamp)
+            for (like in remoteLikes) {
+                val existingLike = likeDB.getLikeById(like.id)
+                if (existingLike == null || (like.remoteTimestamp
+                        ?: 0) > existingLike.localTimeStamp
+                )
                     localDB.likesDao().createLike(like.toLikeEntity())
             }
         }

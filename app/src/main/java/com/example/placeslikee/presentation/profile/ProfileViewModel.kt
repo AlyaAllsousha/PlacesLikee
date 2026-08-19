@@ -45,6 +45,10 @@ class ProfileViewModel @Inject constructor(
     private val _isEmailChanging = MutableStateFlow(false)
     val isEmailChanging = _isEmailChanging.asStateFlow()
 
+    //Defence from liking spam
+    private var isLiking = false
+    private var lastClickTime = 0L
+
     private val _selectedMarker = MutableStateFlow<UIMarker?>(null)
     val selectedMarker =_selectedMarker.asStateFlow()
 
@@ -153,8 +157,17 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun onToggleLike(markerId: String){
+        val currentTime = System.currentTimeMillis()
+        if (isLiking || currentTime - lastClickTime < 500) return
+        isLiking = true
+        lastClickTime = currentTime
         viewModelScope.launch {
-            toggleLikedUseCase(markerId)
+            try {
+                toggleLikedUseCase(markerId)
+            }
+            finally {
+                isLiking = false
+            }
         }
     }
     fun updateInputQuery(query: String){

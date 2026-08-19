@@ -10,5 +10,6 @@ data class UserEntity(
     val id: String,
     val name: String = "",
     val email: String = "",
-    val localTimestamp: Long = System.currentTimeMillis()
+    val localTimestamp: Long = System.currentTimeMillis(),
+    val syncState: SyncState = SyncState.PENDING_CREATE
 )

@@ -2,6 +2,7 @@ package com.example.placeslikee.data.repository
 
 import android.util.Log
 import com.example.placeslikee.data.local.LocalDB
+import com.example.placeslikee.data.local.entities.SyncState
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerWithAuthor
 import com.example.placeslikee.data.mapper.toMarkerEntity
@@ -55,7 +56,7 @@ class MapRepositoryImpl @Inject constructor(
 
     override suspend fun editMarker(marker: UIMarker): Result<String> {
         return try {
-            localDb.markersDao().updateMark(marker.toMarkerEntity())
+            localDb.markersDao().updateMark(marker.toMarkerEntity().copy(synced = SyncState.PENDING_UPDATE))
             syncScheduler.scheduleSingleSync()
             Result.success(marker.id)
         } catch (e: Exception) {

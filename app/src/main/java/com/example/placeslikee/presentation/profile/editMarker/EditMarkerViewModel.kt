@@ -63,6 +63,7 @@ class EditMarkerViewModel @Inject constructor(
             name = name,
             description = description,
             image = image,
+            
             uiTimestamp = System.currentTimeMillis()
         )
         viewModelScope.launch {

@@ -37,20 +37,46 @@ class RemoteDB @Inject constructor(
     suspend fun saveMarker(mark: RemoteMarker) {
         collectionMarkers.document(mark.id).set(mark).await()
     }
+    suspend fun updateMarker(mark: RemoteMarker){
+        collectionMarkers.document(mark.id)
+            .update(
+                "coordinates", mark.coordinates,
+                "description", mark.description,
+                "image", mark.image,
+                "locationName", mark.locationName,
+                "remoteTimestamp", mark.remoteTimestamp
+            )
+            .await()
+    }
 
     fun deleteMarker(mark: RemoteMarker) {
         collectionMarkers.document(mark.id).delete()
     }
 
-    suspend fun updateLikesAmount(markerId: String, isLiked: Boolean){
-        val incrementValue = if (isLiked) 1L else -1L
-        try{
-            collectionMarkers.document(markerId)
-                .update("likesAmount", FieldValue.increment(incrementValue))
-                .await()
-        }
-        catch (e: Exception){
-            Log.e("my log", "updateLikesAmount: Likes amount update error: $e" )
+
+
+    suspend fun syncLikeTransaction(markerId: String, like: RemoteLike, isLiking: Boolean) {
+        try {
+            firestore.runTransaction { transaction ->
+                val likeRef = collectionLikes.document(like.id)
+                val markerRef = collectionMarkers.document(markerId)
+
+                val existingLike = transaction.get(likeRef)
+                val likeExists = existingLike.exists()
+
+                if (isLiking && !likeExists) {
+                    transaction.set(likeRef, like)
+                    transaction.update(markerRef, "likesAmount", FieldValue.increment(1))
+                    transaction.update(markerRef, "remoteTimestamp", System.currentTimeMillis())
+                } else if (!isLiking && likeExists) {
+                    transaction.delete(likeRef)
+                    transaction.update(markerRef, "likesAmount", FieldValue.increment(-1))
+                    transaction.update(markerRef, "remoteTimestamp", System.currentTimeMillis())
+                }
+            }.await()
+        } catch (e: Exception) {
+            Log.e("my log", "syncLikeTransaction error: $e")
+            throw e
         }
     }
 
