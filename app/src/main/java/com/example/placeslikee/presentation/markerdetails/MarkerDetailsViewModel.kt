@@ -2,8 +2,10 @@ package com.example.placeslikee.presentation.markerdetails
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.placeslikee.domain.usecase.auth.GetCurrentIdUseCase
 import com.example.placeslikee.domain.usecase.likes.ToggleLikedUseCase
 import com.example.placeslikee.domain.usecase.markermap.GetMarkerByIdUseCase
+import com.example.placeslikee.domain.usecase.profile.DeleteMarkerUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +20,9 @@ import dagger.assisted.AssistedInject
 class MarkerDetailsViewModel @AssistedInject constructor(
     @Assisted private val markerId: String,
     private val toggleLikedUseCase: ToggleLikedUseCase,
-    private val getMarkerByIdUseCase: GetMarkerByIdUseCase
+    private val getMarkerByIdUseCase: GetMarkerByIdUseCase,
+    private val getCurrentIdUseCase: GetCurrentIdUseCase,
+    private val deleteMarkerUseCase: DeleteMarkerUseCase,
 ) : ViewModel() {
 
     @AssistedFactory
@@ -32,6 +36,8 @@ class MarkerDetailsViewModel @AssistedInject constructor(
     //Defence from liking spam
     private var isLiking = false
     private var lastClickTime = 0L
+
+    val currUserId = getCurrentIdUseCase()
 
     init {
         viewModelScope.launch {
@@ -54,6 +60,11 @@ class MarkerDetailsViewModel @AssistedInject constructor(
             finally {
                 isLiking = false
             }
+        }
+    }
+    fun onDeleteMarker(markerId: String){
+        viewModelScope.launch {
+            deleteMarkerUseCase(markerId)
         }
     }
 }

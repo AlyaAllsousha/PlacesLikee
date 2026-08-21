@@ -29,7 +29,6 @@ class LikeRepositoryImpl @Inject constructor(
 
     override suspend fun toggleLikeToMarker(markerId: String) {
         mutex.withLock {
-
             val userId = auth.currentUser?.uid ?: return
             val likeId = "${markerId}_${userId}"
             val marker = localDB.markersDao().getByIdSynced(markerId) ?: return

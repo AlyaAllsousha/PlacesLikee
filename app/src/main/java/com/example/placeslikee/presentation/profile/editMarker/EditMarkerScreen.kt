@@ -196,7 +196,8 @@ fun EditMarkerScreen(
                             },
                             onDeleteClick = {
                                 selectedImageUri = null
-                            })
+                            },
+                            isProfile = true)
                         Spacer(modifier = Modifier.height(8.dp))
 
                         SectionLabel(text = "Основная информация")

@@ -58,6 +58,7 @@ import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 fun FavouriteScreen(
     viewModel: FavouriteViewModel = hiltViewModel(),
     onNavigateToAuth: () -> Unit,
+    onNavigateToEdit: (String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -204,7 +205,9 @@ fun FavouriteScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            MarkerDetailsContent(markerId = marker.id)
+            MarkerDetailsContent(
+                markerId = marker.id,
+                navigateToEdit = onNavigateToEdit)
         }
     }
 }

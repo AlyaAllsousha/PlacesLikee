@@ -41,7 +41,8 @@ fun ImagePreviewCard(
     imageUrl: String?,
     modifier: Modifier = Modifier,
     onAddOrChangeClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    isProfile:  Boolean = false
 ) {
 
 
@@ -98,22 +99,24 @@ fun ImagePreviewCard(
                         }
                     )
                 }
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    OverlayIconButton(
-                        icon = Icons.Outlined.Edit,
-                        tint = Color.White,
-                        onClick = onAddOrChangeClick
-                    )
-                    OverlayIconButton(
-                        icon = Icons.Outlined.Delete,
-                        tint = Color(0xFFFF5252),
-                        onClick = onDeleteClick
-                    )
+                if (isProfile) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        OverlayIconButton(
+                            icon = Icons.Outlined.Edit,
+                            tint = Color.White,
+                            onClick = onAddOrChangeClick
+                        )
+                        OverlayIconButton(
+                            icon = Icons.Outlined.Delete,
+                            tint = Color(0xFFFF5252),
+                            onClick = onDeleteClick
+                        )
+                    }
                 }
             }
             else{
@@ -122,25 +125,5 @@ fun ImagePreviewCard(
                 }
             }
         }
-}
-@Composable
-private fun OverlayIconButton(
-    icon: ImageVector,
-    tint: Color,
-    onClick: () -> Unit
-) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier
-            .size(36.dp)
-            .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(20.dp)
-        )
-    }
 }
 

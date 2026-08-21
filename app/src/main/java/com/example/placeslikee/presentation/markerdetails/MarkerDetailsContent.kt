@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,11 +18,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.rounded.LocationOn
@@ -38,19 +42,28 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.currentComposer
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.room.Delete
 import coil.compose.SubcomposeAsyncImage
 import com.example.placeslikee.domain.models.UIMarker
+import com.example.placeslikee.presentation.common.AlertDeleteDialog
 import com.example.placeslikee.presentation.common.LikeButton
 import com.example.placeslikee.presentation.common.LoadingBox
+import com.example.placeslikee.presentation.common.OverlayIconButton
 import java.util.Locale
 
 @Composable
@@ -59,9 +72,12 @@ fun MarkerDetailsContent(
     viewModel: MarkerDetailsViewModel = hiltViewModel<MarkerDetailsViewModel, MarkerDetailsViewModel.Factory>(
         key = markerId,
         creationCallback = { factory -> factory.create(markerId) }
-    )
+    ),
+    navigateToEdit: (String) -> Unit,
 ) {
     val markerState by viewModel.markerDetails.collectAsState()
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     when (markerState) {
         DetailsState.Idle -> {}
@@ -85,17 +101,42 @@ fun MarkerDetailsContent(
             } else {
                 MarkerDetailsBody(
                     marker = marker,
-                    onToggleLike = { viewModel.onToggleLike() }
+                    onToggleLike = { viewModel.onToggleLike() },
+                    isCurrAuthor = (viewModel.currUserId == marker.authorId),
+                    onChangeClick = {
+                        navigateToEdit(markerId)
+                    },
+                    onDelete = {
+                        showDeleteDialog = true
+                    }
                 )
+                if (showDeleteDialog) {
+                    AlertDeleteDialog(
+                        onDismissRequest = { showDeleteDialog = false },
+                        markerName =  marker.name,
+                        onConfirmButtonClick = {
+                            showDeleteDialog = false
+                            viewModel.onDeleteMarker(markerId)
+
+                        },
+                        onDismissButtonClick = { showDeleteDialog = false }
+
+                    )
+                }
             }
+
         }
+
     }
 }
 
 @Composable
 private fun MarkerDetailsBody(
     marker: UIMarker,
-    onToggleLike: () -> Unit
+    onToggleLike: () -> Unit,
+    isCurrAuthor: Boolean = false,
+    onChangeClick: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -103,7 +144,12 @@ private fun MarkerDetailsBody(
             .verticalScroll(rememberScrollState())
     ) {
         if (marker.image != null) {
-            PhotoSection(imageUrl = marker.image)
+            PhotoSection(
+                imageUrl = marker.image,
+                isCurrAuthor = isCurrAuthor,
+                onChangeClick =  onChangeClick,
+                onDelete = onDelete
+                )
         }
         Column(
             modifier = Modifier
@@ -214,51 +260,79 @@ private fun MarkerDetailsBody(
 }
 
 @Composable
-private fun PhotoSection(imageUrl: String?) {
+private fun PhotoSection(
+    imageUrl: String?,
+    isCurrAuthor: Boolean = false,
+    onChangeClick: () -> Unit = {},
+    onDelete: () -> Unit = {},
+) {
 
-    if (!imageUrl.isNullOrEmpty()) {
-        SubcomposeAsyncImage(
-            model = imageUrl,
-            contentDescription = "Фото локации",
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 200.dp, max = 500.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.FillWidth,
-            loading = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(260.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
-                        strokeWidth = 2.dp
-                    )
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!imageUrl.isNullOrEmpty()) {
+            SubcomposeAsyncImage(
+                model = imageUrl,
+                contentDescription = "Фото локации",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 200.dp, max = 500.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.FillWidth,
+                loading = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                },
+                error = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PhotoErrorPlaceholder()
+                    }
                 }
-            },
-            error = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(260.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    PhotoErrorPlaceholder()
-                }
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                PhotoErrorPlaceholder()
             }
-        )
-
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(260.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            PhotoErrorPlaceholder()
+        }
+        if(isCurrAuthor) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OverlayIconButton(
+                    icon = Icons.Outlined.Edit,
+                    tint = Color.White,
+                    onClick = onChangeClick
+                )
+                OverlayIconButton(
+                    icon = Icons.Outlined.Delete,
+                    tint = Color(0xFFFF5252),
+                    onClick = onDelete
+                )
+            }
         }
     }
 

@@ -76,6 +76,7 @@ fun MapScreen(
     viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
     onNavigateToAuth: () -> Unit,
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
+    onNavigateToEdit: (String) -> Unit,
     searchQuery: String = "",
     onMapClick: () -> Unit = {}
 ) {
@@ -469,7 +470,9 @@ fun MapScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            MarkerDetailsContent(markerId = marker.id)
+            MarkerDetailsContent(
+                markerId = marker.id,
+                navigateToEdit = onNavigateToEdit)
         }
     }
     DisposableEffect(Unit) {

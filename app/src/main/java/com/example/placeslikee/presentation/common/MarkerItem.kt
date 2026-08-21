@@ -61,7 +61,9 @@ fun MarkerItem(
                     onAddOrChangeClick = onEditClick,
                     onDeleteClick = {
                         showDeleteDialog = true
-                    }
+                    },
+                    isProfile = isProfile
+
                 )
             }
 
@@ -167,88 +169,15 @@ fun MarkerItem(
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
+        AlertDeleteDialog(
             onDismissRequest = { showDeleteDialog = false },
-            icon = {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.size(64.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_delete_forever_24),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
+            markerName =  marker.name,
+            onConfirmButtonClick = {
+                showDeleteDialog = false
+                onDeleteClick()
             },
-            title = {
-                Text(
-                    text = "Удалить место?",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "«${marker.name}»",
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+            onDismissButtonClick = { showDeleteDialog = false }
 
-                    Text(
-                        text = "будет удалено навсегда. Это действие нельзя отменить.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteDialog = false
-                        onDeleteClick()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Удалить",
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showDeleteDialog = false },
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Отмена", fontWeight = FontWeight.Medium)
-                }
-            },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
         )
     }
 }

@@ -28,6 +28,7 @@ import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 @Composable
 fun ListScreen(
     viewModel: ListViewModel = hiltViewModel(),
+    onNavigateToEdit: (String) -> Unit,
     searchQuery: String = "",
     ){
 
@@ -96,7 +97,10 @@ fun ListScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            MarkerDetailsContent(marker.id)
+            MarkerDetailsContent(
+                markerId = marker.id,
+                navigateToEdit = onNavigateToEdit
+            )
         }
     }
 }

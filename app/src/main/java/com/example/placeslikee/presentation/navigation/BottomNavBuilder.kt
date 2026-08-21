@@ -67,6 +67,8 @@ fun NavHostContainer(
                     navController.navigate(NavRoutes.Profile.routes)
                 }, onNavigateToCreateMarker = { info ->
                     navController.navigate("${NavRoutes.CreateMark.routes}/${info.lat}/${info.lon}")
+                }, onNavigateToEdit = {markerId ->
+                    navController.navigate("${NavRoutes.EditMarker.routes}/$markerId")
                 }
                 )
             }
@@ -110,6 +112,9 @@ fun NavHostContainer(
                 FavouriteScreen(
                     onNavigateToAuth = {
                            navController.navigate(NavRoutes.Auth.routes) 
+                    },
+                    onNavigateToEdit = {markerId ->
+                        navController.navigate("${NavRoutes.EditMarker.routes}/$markerId")
                     }
                 )
             }

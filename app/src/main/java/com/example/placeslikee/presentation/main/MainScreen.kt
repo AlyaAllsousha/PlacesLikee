@@ -95,7 +95,7 @@ fun MainScreen(
     onNavigateToAuth: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
-
+    onNavigateToEdit: (String) -> Unit,
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val user by viewModel.currentUser.collectAsState()
@@ -228,6 +228,7 @@ fun MainScreen(
                                             onNavigateToCreateMarker(it)
                                         }
                                     },
+                                    onNavigateToEdit = onNavigateToEdit,
                                     onMapClick = {
                                         focusManager.clearFocus()
                                         keyboardController?.hide()
@@ -245,7 +246,9 @@ fun MainScreen(
                         }
                     } else {
                         isMapVisible = false
-                        ListScreen(searchQuery = appliedQuery)
+                        ListScreen(
+                            searchQuery = appliedQuery,
+                            onNavigateToEdit = onNavigateToEdit)
                     }
                     DropdownSearchResults(
                         visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != appliedQuery,

@@ -64,6 +64,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.pointer.pointerInput
 
 import androidx.compose.ui.platform.LocalFocusManager
@@ -104,6 +105,7 @@ fun ProfileScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val isImeVisible = WindowInsets.isImeVisible
 
+    val scope = rememberCoroutineScope()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
@@ -155,7 +157,9 @@ fun ProfileScreen(
 
     LaunchedEffect(externalSnackbarMessage) {
         if (externalSnackbarMessage != null) {
-            snackbarHostState.showSnackbar(externalSnackbarMessage)
+            scope.launch {
+                snackbarHostState.showSnackbar(externalSnackbarMessage)
+            }
             onClearSnackbarMessage()
         }
     }
@@ -361,7 +365,9 @@ fun ProfileScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            MarkerDetailsContent(markerId = marker.id)
+            MarkerDetailsContent(
+                markerId = marker.id,
+                navigateToEdit = onNavigateToEdit)
         }
     }
 }
