@@ -1,9 +1,11 @@
 package com.example.placeslikee.presentation.profile.editMarker
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.placeslikee.domain.models.UIMarker
+import com.example.placeslikee.domain.usecase.images.SaveImageUseCase
 import com.example.placeslikee.domain.usecase.markermap.GetMarkerByIdUseCase
 import com.example.placeslikee.domain.usecase.profile.EditMarkerUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +20,7 @@ import javax.inject.Inject
 class EditMarkerViewModel @Inject constructor(
     private val getMarkerByIdUseCase: GetMarkerByIdUseCase,
     private val editMarkerUseCase: EditMarkerUseCase,
+    private val saveImageUseCase: SaveImageUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val markerId = savedStateHandle.get<String>("markerId") ?: "0"
@@ -57,30 +60,40 @@ class EditMarkerViewModel @Inject constructor(
             return
 
         val originMarker = (_editMarkerState.value as EditMarkerState.Success).marker
-        val updatedMarker = originMarker.copy(
-            latitude = lat,
-            longitude = longitude,
-            name = name,
-            description = description,
-            image = image,
-            
-            uiTimestamp = System.currentTimeMillis()
-        )
         viewModelScope.launch {
             _markerIsUpdating.value = true
-            val result = editMarkerUseCase(updatedMarker)
-            result.onSuccess {
-                _uiEvent.send(EditMarkerEvent.Succeed("Место изменено"))
-            }
-            result.onFailure { exception ->
-                _uiEvent.send(
-                    EditMarkerEvent.Error(
-                        exception.message ?: "Не удалось сохранить изменения"
-                    )
+            try {
+                val localImagePath = if (image != null && image != originMarker.image) {
+                    saveImageUseCase.invoke(image)
+                } else {
+                    image
+                }
+                Log.e("my log", "onSubmit: image = $image",)
+
+                val updatedMarker = originMarker.copy(
+                    latitude = lat,
+                    longitude = longitude,
+                    name = name,
+                    description = description,
+                    image = localImagePath,
+                    uiTimestamp = System.currentTimeMillis()
                 )
+                val result = editMarkerUseCase(updatedMarker)
+                result.onSuccess {
+                    _uiEvent.send(EditMarkerEvent.Succeed("Место изменено"))
+                }
+                result.onFailure { exception ->
+                    _uiEvent.send(
+                        EditMarkerEvent.Error(
+                            exception.message ?: "Не удалось сохранить изменения"
+                        )
+                    )
+                }
+            }
+            finally {
+                _markerIsUpdating.value = false
             }
         }
-        _markerIsUpdating.value = false
 
     }
     fun reloadMarker (){

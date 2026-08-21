@@ -1,5 +1,9 @@
 package com.example.placeslikee.presentation.newmarker
 
+import android.graphics.Paint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -8,10 +12,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
@@ -21,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,6 +35,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -70,12 +78,17 @@ fun CreateMarkerScreen(
 
     var name by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var image by rememberSaveable { mutableStateOf("") }
+    var selectedImageUri by rememberSaveable { mutableStateOf<String?>(null) }
 
     val snackBarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     val isImeVisible = WindowInsets.isImeVisible
 
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        selectedImageUri = uri?.toString()
+    }
     LaunchedEffect(isImeVisible) {
         if (!isImeVisible) {
             focusManager.clearFocus()
@@ -95,12 +108,14 @@ fun CreateMarkerScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackBarHostState){snackbarData ->
-            CustomSnackbar(
-                snackbarData = snackbarData,
-                isSuccess = true
-            )
-        } },
+        snackbarHost = {
+            SnackbarHost(snackBarHostState) { snackbarData ->
+                CustomSnackbar(
+                    snackbarData = snackbarData,
+                    isSuccess = true
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -125,7 +140,6 @@ fun CreateMarkerScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -150,10 +164,9 @@ fun CreateMarkerScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    ImagePreviewCard(imageUrl = image)
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    if (selectedImageUri != null) {
+                        ImagePreviewCard(imageUrl = selectedImageUri!!)
+                    }
                     SectionLabel(text = "Основная информация")
 
                     MarkerTextField(
@@ -182,49 +195,69 @@ fun CreateMarkerScreen(
 
                     SectionLabel(text = "Фотография")
 
-                    MarkerTextField(
-                        value = image,
-                        onValueChange = { image = it },
-                        label = "Ссылка на фото (необязательно)",
-                        placeholder = "https://...",
-                        leadingIcon = painterResource( R.drawable.outline_image_24),
-                        singleLine = true
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_image_24),
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(text = if (selectedImageUri == null) "Выбрать фото" else "Изменить фото")
+                        }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                SaveButton(
-                    isLoading = state is NewMarkerState.Loading,
-                    isEnabled = name.isNotBlank() && state !is NewMarkerState.Loading,
-                    text = "Сохранить место",
-                    onClick = {
-                        focusManager.clearFocus()
-                        viewModel.onSaveClick(
-                            name,
-                            description.ifBlank { null },
-                            image.ifBlank { null }
-                        )
+                        AnimatedVisibility(visible = selectedImageUri != null) {
+                            IconButton(
+                                onClick = { selectedImageUri = null }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Delete,
+                                    contentDescription = "Удалить фото",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                     }
-                )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            AnimatedVisibility(
-                visible = state is NewMarkerState.Loading,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
+            SaveButton(
+                isLoading = state is NewMarkerState.Loading,
+                isEnabled = name.isNotBlank() && state !is NewMarkerState.Loading,
+                text = "Сохранить место",
+                onClick = {
+                    focusManager.clearFocus()
+                    viewModel.onSaveClick(
+                        name,
+                        description.ifBlank { null },
+                        selectedImageUri
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        AnimatedVisibility(
+            visible = state is NewMarkerState.Loading,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     }
 }
-
-
-
-
-
+}
 

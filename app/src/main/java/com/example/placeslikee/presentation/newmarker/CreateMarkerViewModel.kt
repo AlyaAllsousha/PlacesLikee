@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.placeslikee.domain.usecase.markermap.CreateMarkerUseCase
 import com.example.placeslikee.domain.usecase.auth.GetCurrentIdUseCase
+import com.example.placeslikee.domain.usecase.images.SaveImageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import javax.inject.Inject
 class CreateMarkerViewModel @Inject constructor(
     private val getCurrentIdUseCase: GetCurrentIdUseCase,
     private val createMarkerUseCase: CreateMarkerUseCase,
+    private val saveImageUseCase: SaveImageUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel(){
     val lat: Double = savedStateHandle.get<String>("lat")?.toDoubleOrNull() ?: 0.0
@@ -35,13 +37,19 @@ class CreateMarkerViewModel @Inject constructor(
             try{
                 val userId = getCurrentIdUseCase()
                 if(userId != null){
+                    val localImagePath  = if( image != null) {
+                        saveImageUseCase.invoke(image)
+                    }
+                    else{
+                        null
+                    }
                     createMarkerUseCase(
                         lat = lat,
                         lon = lon,
                         authorId = userId,
                         name = name,
                         description = description,
-                        image = image,
+                        image = localImagePath,
                     )
                     _navigateBack.emit(Unit)
                 }

@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.work.Configuration
 import androidx.hilt.work.HiltWorkerFactory
+import com.cloudinary.android.MediaManager
 import com.example.placeslikee.workmanger.SyncWorkerScheduler
 import com.yandex.mapkit.MapKitFactory
 import dagger.hilt.android.HiltAndroidApp
@@ -32,7 +33,7 @@ class App : Application(), Configuration.Provider {
         val config = mapOf(
             "cloud_name" to "elezs5h0"
         )
-        //MediaManager.init(this, config)
+        MediaManager.init(this, config)
     }
 
 }

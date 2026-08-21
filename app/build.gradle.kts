@@ -85,7 +85,7 @@ dependencies {
     implementation(libs.googleid)
 
     //Image storage server (Cloudinary)
-    implementation("com.cloudinary:cloudinary-android:2.5.0")
+    implementation("com.cloudinary:cloudinary-android:3.1.2")
 
     //WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")

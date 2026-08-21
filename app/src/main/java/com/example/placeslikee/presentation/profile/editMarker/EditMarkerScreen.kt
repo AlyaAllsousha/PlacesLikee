@@ -1,5 +1,8 @@
 package com.example.placeslikee.presentation.profile.editMarker
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -40,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +83,9 @@ fun EditMarkerScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val isMarkerUpdating by viewModel.markerIsUpdating.collectAsState()
 
+
+
+
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { result ->
             when (result) {
@@ -99,7 +108,7 @@ fun EditMarkerScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Новое место",
+                        text = "Изменить место",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -142,14 +151,20 @@ fun EditMarkerScreen(
                 var lonStr by remember(marker.id) { mutableStateOf(marker.longitude.toString()) }
                 var name by remember(marker.id) { mutableStateOf(marker.name) }
                 var description by remember(marker.id) { mutableStateOf(marker.description) }
-                var image by remember(marker.id) { mutableStateOf(marker.image ?: "") }
+                var selectedImageUri by remember(marker.id) { mutableStateOf<String?>(marker.image) }
+
+                val photoPickerLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.PickVisualMedia()
+                ) { uri ->
+                    if(uri != null)
+                        selectedImageUri = uri.toString()
+                }
 
                 val parsedLat = latStr.toDoubleOrNull()
                 val parsedLon = lonStr.toDoubleOrNull()
 
                 val isLatValid = parsedLat != null && parsedLat in -90.0..90.0
                 val isLonValid = parsedLon != null && parsedLon in -180.0..180.0
-
 
                 Box(
                     modifier = Modifier
@@ -161,24 +176,23 @@ fun EditMarkerScreen(
                             detectTapGestures(onTap = { focusManager.clearFocus() })
                         }
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 20.dp)
-                    ) {
+
                         Column(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp)
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            ImagePreviewCard(imageUrl = image)
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
+                            AnimatedVisibility(selectedImageUri != null) {
+                                ImagePreviewCard(
+                                    imageUrl = selectedImageUri!!,
+                                    onClick = {})
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
                             SectionLabel(text = "Основная информация")
 
                             MarkerTextField(
@@ -254,18 +268,43 @@ fun EditMarkerScreen(
                             }
                             SectionLabel(text = "Фотография")
 
-                            MarkerTextField(
-                                value = image,
-                                onValueChange = { image = it },
-                                label = "Ссылка на фото",
-                                placeholder = "https://...",
-                                leadingIcon = painterResource(R.drawable.outline_image_24),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        photoPickerLauncher.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
+                                    }
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.outline_image_24),
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                    Text(text = if (selectedImageUri == null) "Выбрать фото" else "Изменить фото")
+                                }
 
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+                                AnimatedVisibility(visible = selectedImageUri != null) {
+                                    IconButton(
+                                        onClick = { selectedImageUri = null }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Delete,
+                                            contentDescription = "Удалить фото",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            }
+
+
+                            Spacer(modifier = Modifier.weight(1f, fill = false))
+                            Spacer(modifier = Modifier.height(16.dp))
 
                         SaveButton(
                             isLoading = isMarkerUpdating,
@@ -278,7 +317,7 @@ fun EditMarkerScreen(
                                     longitude = lonStr.toDouble(),
                                     name = name.trim(),
                                     description = description?.trim()?.ifBlank { null },
-                                    image = image.trim().ifBlank { null }
+                                    image = selectedImageUri
                                 )
                             }
                         )

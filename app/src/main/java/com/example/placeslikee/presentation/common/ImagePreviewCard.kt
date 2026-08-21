@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -27,25 +29,31 @@ import coil.compose.SubcomposeAsyncImage
 import com.example.placeslikee.R
 
 @Composable
-fun ImagePreviewCard(imageUrl: String) {
+fun ImagePreviewCard(
+    imageUrl: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
     AnimatedVisibility(
         visible = imageUrl.isNotBlank(),
         enter = fadeIn(),
         exit = fadeOut()
     ) {
+
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
-                .height(200.dp)
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .clickable{onClick()},
             contentAlignment = Alignment.Center
+
         ) {
             SubcomposeAsyncImage(
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.large)
+                    .heightIn(max = 400.dp),
                 model = imageUrl,
                 contentDescription = "Превью фото",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
                 loading = {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -65,7 +73,7 @@ fun ImagePreviewCard(imageUrl: String) {
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Icon(
-                            painter = painterResource( R.drawable.outline_image_24),
+                            painter = painterResource(R.drawable.outline_image_24),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.size(32.dp)
@@ -82,3 +90,4 @@ fun ImagePreviewCard(imageUrl: String) {
         }
     }
 }
+

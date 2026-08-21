@@ -2,7 +2,9 @@ package com.example.placeslikee.workmanger
 
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.util.Log
+import com.example.placeslikee.data.remote.claudinary.CloudinaryManager
 import com.example.placeslikee.data.local.LocalDB
 import com.example.placeslikee.data.local.dao.LikesDao
 import com.example.placeslikee.data.local.dao.MarkerDao
@@ -18,6 +20,7 @@ import com.example.placeslikee.data.remote.RemoteDB
 import com.example.placeslikee.data.remote.dto.RemoteMarker
 import com.example.placeslikee.data.remote.dto.RemoteUser
 import com.example.placeslikee.domain.repositories.AuthRepository
+import com.example.placeslikee.domain.repositories.ImageStorageRepository
 import com.example.placeslikee.domain.repositories.LikeRepository
 import com.google.firebase.auth.FirebaseAuth
 import javax.inject.Inject
@@ -28,7 +31,8 @@ class MarkersSyncManager @Inject constructor(
     private val authRepository: AuthRepository,
     private val localDB: LocalDB,
     private val remoteDB: RemoteDB,
-    private val connectivityManager: ConnectivityManager
+    private val connectivityManager: ConnectivityManager,
+    private val imageStorageRepository: ImageStorageRepository
 ) {
     suspend fun sync() {
         if (!isNetworkAvailable()) {
@@ -65,7 +69,19 @@ class MarkersSyncManager @Inject constructor(
             val remoteTimestamp = existingRemoteMark?.remoteTimestamp ?: 0L
             when (marker.synced) {
                 SyncState.PENDING_CREATE -> {
-                    remoteDB.saveMarker(marker.toRemoteMarker())
+                    var remoteImageUrl  = marker.image
+                    if(!marker.image.isNullOrEmpty()){
+                        try{
+                            remoteImageUrl = imageStorageRepository.uploadImage(marker.image)
+                            localDB.markersDao().updateMark(marker.copy(image = remoteImageUrl))
+                        }
+                        catch (e: Exception){
+                            Log.e("my log", "pushLocalChanges: Image upload failed $e")
+                            throw e
+                        }
+                    }
+                    val remoteMarker = marker.toRemoteMarker().copy(image = remoteImageUrl)
+                    remoteDB.saveMarker(remoteMarker)
                     if (marker.authorId != null)
                         remoteDB.saveUser(
                             userDao.getUserById(marker.authorId)!!.toRemoteUser()
@@ -79,7 +95,19 @@ class MarkersSyncManager @Inject constructor(
 
                 SyncState.PENDING_UPDATE -> {
                     if (remoteTimestamp < marker.localTimestamp) {
-                        remoteDB.updateMarker(marker.toRemoteMarker())
+                        var remoteImageUrl  = marker.image
+                        if(!marker.image.isNullOrEmpty() && !marker.image.startsWith("http")){
+                            try{
+                                remoteImageUrl = imageStorageRepository.uploadImage(marker.image)
+                                localDB.markersDao().updateMark(marker.copy(image = remoteImageUrl))
+                            }
+                            catch (e: Exception){
+                                Log.e("my log", "pushLocalChanges: Image upload failed $e")
+                                throw e
+                            }
+                        }
+                        val remoteMarker = marker.toRemoteMarker().copy(image = remoteImageUrl)
+                        remoteDB.updateMarker(remoteMarker)
                     }
                 }
 
