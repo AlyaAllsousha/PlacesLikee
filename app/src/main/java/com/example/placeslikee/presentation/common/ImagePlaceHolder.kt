@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 
@@ -23,6 +24,8 @@ fun ImagePlaceholder() {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .height(200.dp)
+            .clip(MaterialTheme.shapes.large)
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
@@ -42,7 +45,7 @@ fun ImagePlaceholder() {
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Нет фото",
+                text = "Добавить фото",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
             )

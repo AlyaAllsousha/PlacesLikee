@@ -72,6 +72,7 @@ import androidx.compose.ui.zIndex
 
 import com.example.placeslikee.presentation.common.CustomSnackbar
 import com.example.placeslikee.presentation.common.DropdownSearchResults
+import com.example.placeslikee.presentation.common.MarkerItem
 import com.example.placeslikee.presentation.common.OverlayColumn
 import com.example.placeslikee.presentation.common.SearchBar
 import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
@@ -154,9 +155,7 @@ fun ProfileScreen(
 
     LaunchedEffect(externalSnackbarMessage) {
         if (externalSnackbarMessage != null) {
-            launch {
-                snackbarHostState.showSnackbar(externalSnackbarMessage)
-            }
+            snackbarHostState.showSnackbar(externalSnackbarMessage)
             onClearSnackbarMessage()
         }
     }
@@ -231,7 +230,9 @@ fun ProfileScreen(
 
                     item {
                         SectionHeader(
-                            modifier = Modifier.padding(horizontal = 16.dp).zIndex(1f),
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .zIndex(1f),
                             markersCount = markers.size
                         )
                     }
@@ -301,10 +302,11 @@ fun ProfileScreen(
                                         onNavigateToEdit(marker.id)
                                     },
                                     onDeleteClick = { viewModel.deleteMarker(marker.id) },
-                                    onMarkerClick = {
+                                    onLikeClick = { viewModel.onToggleLike(marker.id) },
+                                    onClick = {
                                         viewModel.onMarkerClick(marker.id)
                                     },
-                                    onLikeClick = {viewModel.onToggleLike(marker.id)},
+                                    isProfile = true,
                                 )
                             }
                         }

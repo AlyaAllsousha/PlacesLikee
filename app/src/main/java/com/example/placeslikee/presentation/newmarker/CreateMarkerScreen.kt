@@ -52,6 +52,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -87,7 +88,8 @@ fun CreateMarkerScreen(
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        selectedImageUri = uri?.toString()
+        if(uri != null)
+            selectedImageUri = uri.toString()
     }
     LaunchedEffect(isImeVisible) {
         if (!isImeVisible) {
@@ -164,9 +166,18 @@ fun CreateMarkerScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    if (selectedImageUri != null) {
-                        ImagePreviewCard(imageUrl = selectedImageUri!!)
-                    }
+                    ImagePreviewCard(
+                        imageUrl = selectedImageUri,
+                        modifier = Modifier.clip(MaterialTheme.shapes.large),
+                        onAddOrChangeClick = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        onDeleteClick = {
+                            selectedImageUri = null
+                        })
+
                     SectionLabel(text = "Основная информация")
 
                     MarkerTextField(
@@ -192,42 +203,6 @@ fun CreateMarkerScreen(
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
 
                     )
-
-                    SectionLabel(text = "Фотография")
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            }
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.outline_image_24),
-                                contentDescription = null,
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                            Text(text = if (selectedImageUri == null) "Выбрать фото" else "Изменить фото")
-                        }
-
-                        AnimatedVisibility(visible = selectedImageUri != null) {
-                            IconButton(
-                                onClick = { selectedImageUri = null }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Delete,
-                                    contentDescription = "Удалить фото",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
 
                 Spacer(modifier = Modifier.height(8.dp))
             }

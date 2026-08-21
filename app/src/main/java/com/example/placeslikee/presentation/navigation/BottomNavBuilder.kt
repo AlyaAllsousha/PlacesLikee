@@ -84,7 +84,7 @@ fun NavHostContainer(
                 ProfileScreen(
                     externalSnackbarMessage = externalSnackbarMessage,
                     onClearSnackbarMessage = {
-                        savedStateHandle.remove<String>("snackbar_message")
+                        savedStateHandle.remove<String>("edit_message")
                     },
                     onNavigateToAuth = { navController.navigate(NavRoutes.Auth.routes) },
                     onNavigateToEdit = {markerId ->

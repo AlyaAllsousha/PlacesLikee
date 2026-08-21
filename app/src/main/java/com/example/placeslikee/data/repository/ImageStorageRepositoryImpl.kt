@@ -3,6 +3,7 @@ package com.example.placeslikee.data.repository
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import com.example.placeslikee.data.remote.claudinary.CloudinaryManager
 import com.example.placeslikee.domain.repositories.ImageStorageRepository
@@ -15,6 +16,7 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.net.toUri
+import androidx.exifinterface.media.ExifInterface
 
 @Singleton
 class ImageStorageRepositoryImpl @Inject constructor(
@@ -25,12 +27,41 @@ class ImageStorageRepositoryImpl @Inject constructor(
         return withContext(Dispatchers.IO){
             try{
                 val uri  = uriString.toUri()
-                val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
-                val originalBitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream.close()
+                var rotation = 0
+                context.contentResolver.openInputStream(uri)?.use { exifStream ->
+                    val exif = ExifInterface(exifStream)
+                    val orientation = exif.getAttributeInt(
+                        ExifInterface.TAG_ORIENTATION,
+                        ExifInterface.ORIENTATION_NORMAL
+                    )
+                    rotation = when(orientation){
+                        ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                        ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                        ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                        else -> 0
+                    }
+                }
+                val originalBitmap = context.contentResolver.openInputStream(uri).use{stream ->
+                    BitmapFactory.decodeStream(stream)
+                } ?: return@withContext null
 
-                if(originalBitmap == null) return@withContext null
-                val resizedBitmap  = scaleBitmapDown(originalBitmap, 1920)
+                val rotatedBitmap = if ( rotation != 0){
+                    val matrix = Matrix()
+                    matrix.postRotate(rotation.toFloat())
+                    val rotated = Bitmap.createBitmap(
+                        originalBitmap, 0 ,0,
+                        originalBitmap.width, originalBitmap.height,
+                        matrix, true
+                    )
+                    originalBitmap.recycle()
+                    rotated
+                }
+                else{
+                    originalBitmap
+                }
+
+
+                val resizedBitmap  = scaleBitmapDown(rotatedBitmap, 1920)
                 val fileName = "marker_${UUID.randomUUID()}.webp"
                 val file = File(context.filesDir, fileName)
                 val outputStream = FileOutputStream(file)
@@ -41,10 +72,10 @@ class ImageStorageRepositoryImpl @Inject constructor(
                     resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
                 }
                 outputStream.close()
-                originalBitmap.recycle()
-                if(resizedBitmap != originalBitmap){
-                    resizedBitmap.recycle()
+                if(resizedBitmap != rotatedBitmap){
+                    rotatedBitmap.recycle()
                 }
+                resizedBitmap.recycle()
                 if(success) file.absolutePath else null
             }
             catch( e: Exception){

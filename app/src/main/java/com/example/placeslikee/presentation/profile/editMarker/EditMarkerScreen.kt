@@ -95,7 +95,6 @@ fun EditMarkerScreen(
 
                 is EditMarkerEvent.Succeed -> {
                     onNavigateBack(result.message)
-
                 }
             }
         }
@@ -156,7 +155,7 @@ fun EditMarkerScreen(
                 val photoPickerLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.PickVisualMedia()
                 ) { uri ->
-                    if(uri != null)
+                    if (uri != null)
                         selectedImageUri = uri.toString()
                 }
 
@@ -177,134 +176,106 @@ fun EditMarkerScreen(
                         }
                 ) {
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 20.dp)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        ImagePreviewCard(
+                            imageUrl = selectedImageUri,
+                            modifier = Modifier.clip(MaterialTheme.shapes.large),
+                            onAddOrChangeClick = {
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            onDeleteClick = {
+                                selectedImageUri = null
+                            })
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        SectionLabel(text = "Основная информация")
+
+                        MarkerTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = "Название места",
+                            placeholder = "Например: Смотровая площадка",
+                            leadingIcon = rememberVectorPainter(image = Icons.Outlined.LocationOn),
+                            isError = name.isBlank(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+
+                        )
+                        AnimatedVisibility(visible = name.isBlank()) {
+                            Text(
+                                text = "У места должно быть имя",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                            )
+                        }
+
+                        MarkerTextField(
+                            value = description ?: "",
+                            onValueChange = { description = it },
+                            label = "Описание",
+                            placeholder = "Расскажите об этом месте...",
+                            leadingIcon = rememberVectorPainter(image = Icons.Outlined.Edit),
+                            singleLine = false,
+                            minLines = 3,
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+
+                        )
+                        SectionLabel(text = "Координаты")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            AnimatedVisibility(selectedImageUri != null) {
-                                ImagePreviewCard(
-                                    imageUrl = selectedImageUri!!,
-                                    onClick = {})
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
-                            SectionLabel(text = "Основная информация")
-
                             MarkerTextField(
-                                value = name,
-                                onValueChange = { name = it },
-                                label = "Название места",
-                                placeholder = "Например: Смотровая площадка",
-                                leadingIcon = rememberVectorPainter(image = Icons.Outlined.LocationOn),
-                                isError = name.isBlank(),
+                                value = latStr,
+                                onValueChange = { input ->
+                                    latStr = input.replace(",", ".").trim()
+                                },
+                                label = "Широта",
+                                placeholder = "-90.0 до 90.0",
                                 singleLine = true,
-                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
-
+                                isError = !isLatValid,
+                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                             )
-                            AnimatedVisibility(visible = name.isBlank()) {
-                                Text(
-                                    text = "У места должно быть имя",
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                                )
-                            }
 
                             MarkerTextField(
-                                value = description ?: "",
-                                onValueChange = { description = it },
-                                label = "Описание",
-                                placeholder = "Расскажите об этом месте...",
-                                leadingIcon = rememberVectorPainter(image = Icons.Outlined.Edit),
-                                singleLine = false,
-                                minLines = 3,
-                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
-
+                                value = lonStr,
+                                onValueChange = { input ->
+                                    lonStr = input.replace(",", ".").trim()
+                                },
+                                label = "Долгота",
+                                placeholder = "-180.0 до 180.0",
+                                singleLine = true,
+                                isError = !isLonValid,
+                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                             )
-                            SectionLabel(text = "Координаты")
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                MarkerTextField(
-                                    value = latStr,
-                                    onValueChange = { input ->
-                                        latStr = input.replace(",", ".").trim()
-                                    },
-                                    label = "Широта",
-                                    placeholder = "-90.0 до 90.0",
-                                    singleLine = true,
-                                    isError = !isLatValid,
-                                    modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                                )
+                        }
 
-                                MarkerTextField(
-                                    value = lonStr,
-                                    onValueChange = { input ->
-                                        lonStr = input.replace(",", ".").trim()
-                                    },
-                                    label = "Долгота",
-                                    placeholder = "-180.0 до 180.0",
-                                    singleLine = true,
-                                    isError = !isLonValid,
-                                    modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                                )
-                            }
-
-                            AnimatedVisibility(visible = !isLatValid || !isLonValid) {
-                                Text(
-                                    text = "Координаты указаны неверно. Используйте только числа и точку.",
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                                )
-                            }
-                            SectionLabel(text = "Фотография")
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedButton(
-                                    modifier = Modifier.weight(1f),
-                                    onClick = {
-                                        photoPickerLauncher.launch(
-                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                        )
-                                    }
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.outline_image_24),
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    )
-                                    Text(text = if (selectedImageUri == null) "Выбрать фото" else "Изменить фото")
-                                }
-
-                                AnimatedVisibility(visible = selectedImageUri != null) {
-                                    IconButton(
-                                        onClick = { selectedImageUri = null }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Delete,
-                                            contentDescription = "Удалить фото",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                }
-                            }
+                        AnimatedVisibility(visible = !isLatValid || !isLonValid) {
+                            Text(
+                                text = "Координаты указаны неверно. Используйте только числа и точку.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                            )
+                        }
 
 
-                            Spacer(modifier = Modifier.weight(1f, fill = false))
-                            Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.weight(1f, fill = false))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         SaveButton(
                             isLoading = isMarkerUpdating,

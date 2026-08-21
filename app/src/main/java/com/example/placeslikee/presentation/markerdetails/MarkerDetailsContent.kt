@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -170,7 +171,8 @@ private fun MarkerDetailsBody(
 
                 AuthorRow(
                     modifier = Modifier.weight(1f),
-                    authorName = marker.authorName)
+                    authorName = marker.authorName
+                )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -213,37 +215,53 @@ private fun MarkerDetailsBody(
 
 @Composable
 private fun PhotoSection(imageUrl: String?) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(260.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center
-    ) {
-        if (!imageUrl.isNullOrEmpty()) {
-            SubcomposeAsyncImage(
-                model = imageUrl,
-                contentDescription = "Фото локации",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                loading = {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            strokeWidth = 2.dp
-                        )
-                    }
-                },
-                error = { PhotoErrorPlaceholder() }
-            )
 
-        } else {
+    if (!imageUrl.isNullOrEmpty()) {
+        SubcomposeAsyncImage(
+            model = imageUrl,
+            contentDescription = "Фото локации",
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 200.dp, max = 500.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.FillWidth,
+            loading = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
+            },
+            error = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PhotoErrorPlaceholder()
+                }
+            }
+        )
+
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(260.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
             PhotoErrorPlaceholder()
         }
     }
+
 }
 
 @Composable
