@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,7 +37,7 @@ class MapViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
 
-    private val _snackbarMessage = Channel<String>()
+    private val _snackbarMessage = Channel<String>(Channel.CONFLATED)
     val snackbarMessage = _snackbarMessage.receiveAsFlow()
 
     fun setSearchQuery(query: String) {
@@ -86,27 +87,34 @@ class MapViewModel @Inject constructor(
                 getMapMarkerUseCase(),
                 _searchQuery
             ) { points, query ->
-                val filtered  = if(query.isBlank()){
+                val filtered = if (query.isBlank()) {
                     points
-                }else{
+                } else {
                     val lowerCaseQuery = query.lowercase()
-                    points.filter{marker ->
+                    points.filter { marker ->
                         marker.name.lowercase().contains(lowerCaseQuery) ||
-                                (marker.authorName ?: "").lowercase().contains(lowerCaseQuery) }
+                                (marker.authorName ?: "").lowercase().contains(lowerCaseQuery) ||
+                                (lowerCaseQuery.startsWith("#") && (marker.description ?: "").lowercase().contains(lowerCaseQuery))
+                    }
 
                 }
                 Pair(filtered, query)
-                }.collect {(filteredPoint, query) ->
-                    if(filteredPoint.isEmpty() && query.isNotBlank()){
-                        _snackbarMessage.send("Ничего не найдено")
+            }
+                .distinctUntilChanged()
+                .collect { (filteredPoint, query) ->
+                    _mapState.value = _mapState.value.copy(
+                        points = filteredPoint,
+                        isLoading = false
+                    )
+                if (filteredPoint.isEmpty() && query.isNotBlank()) {
+                    _snackbarMessage.trySend("Ничего не найдено")
+                } else {
+                    _mapState.value =
+                        _mapState.value.copy(points = filteredPoint, isLoading = false)
+                    if (query.isNotBlank() && filteredPoint.isNotEmpty()) {
+                        _cameraCommands.trySend(CameraCommand.FitBounds(filteredPoint))
                     }
-                else {
-                        _mapState.value =
-                            _mapState.value.copy(points = filteredPoint, isLoading = false)
-                        if (query.isNotBlank() && filteredPoint.isNotEmpty()) {
-                            _cameraCommands.trySend(CameraCommand.FitBounds(filteredPoint))
-                        }
-                    }
+                }
             }
         }
     }
@@ -121,9 +129,14 @@ class MapViewModel @Inject constructor(
 
             is MapEvent.onPointClick -> {
                 val clickMarker = mapState.value.points.find { it.id == event.pointId }
-                _selectedMarker.value = clickMarker
                 if (clickMarker != null) {
-                    _cameraCommands.trySend(CameraCommand.MoveTo(clickMarker.latitude, clickMarker.longitude, 16.5f))
+                    _cameraCommands.trySend(
+                        CameraCommand.MoveTo(
+                            clickMarker.latitude,
+                            clickMarker.longitude,
+                            16.5f
+                        )
+                    )
                 }
             }
         }
@@ -135,14 +148,7 @@ class MapViewModel @Inject constructor(
 
     private fun handleLongClick(lat: Double, lon: Double) {
         viewModelScope.launch {
-            if (!isUserLoggedInUseCase()) {
-                _navigateToAuth.emit(Unit)
-            } else {
-                val userId = getCurrentIdUseCase()
-                if (userId != null) {
-                    _navigateToCreateMarker.emit(NewMarkerIfo(lat, lon))
-                }
-            }
+            _navigateToCreateMarker.emit(NewMarkerIfo(lat, lon))
         }
     }
 }

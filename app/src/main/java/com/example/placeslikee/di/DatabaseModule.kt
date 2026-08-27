@@ -5,6 +5,8 @@ import android.net.ConnectivityManager
 import android.net.LocalSocket
 import androidx.room.Room
 import com.example.placeslikee.data.local.LocalDB
+import com.example.placeslikee.data.local.dao.FollowingDao
+import com.example.placeslikee.data.local.dao.LikesDao
 import com.example.placeslikee.data.local.dao.MarkerDao
 import com.example.placeslikee.data.local.dao.UsersDao
 import com.google.firebase.firestore.FirebaseFirestore
@@ -49,6 +51,16 @@ object DatabaseModule {
     @Provides
     fun provideUserDao(database: LocalDB):UsersDao{
         return database.usersDao()
+    }
+
+    @Provides
+    fun providesLikeDao (database: LocalDB) : LikesDao{
+        return database.likesDao()
+    }
+
+    @Provides
+    fun provideFollowingDao ( database: LocalDB) : FollowingDao{
+        return database.followingDao()
     }
 
 

@@ -17,7 +17,7 @@ import javax.inject.Inject
 class ListViewModel @Inject constructor(
     private val getMapMarkUseCase: GetMapMarkUseCase,
     private val toggleLikedUseCase: ToggleLikedUseCase
-    ) : ViewModel() {
+) : ViewModel() {
     private val _uiState = MutableStateFlow<ListState>(ListState.Loading)
     val uiState = _uiState.asStateFlow()
 
@@ -26,8 +26,6 @@ class ListViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
-    private val _selectedMarker = MutableStateFlow<UIMarker?>(null)
-    val selectedMarker = _selectedMarker.asStateFlow()
 
     init {
         loadPoints()
@@ -39,18 +37,20 @@ class ListViewModel @Inject constructor(
                 getMapMarkUseCase(),
                 _searchQuery
             ) { points, query ->
-                val filtered  = if(query.isBlank()){
+                val filtered = if (query.isBlank()) {
                     points
-                }else{
+                } else {
                     val lowerCaseQuery = query.lowercase()
-                    points.filter{marker ->
+                    points.filter { marker ->
                         marker.name.lowercase().contains(lowerCaseQuery) ||
-                                (marker.authorName ?: "").lowercase().contains(lowerCaseQuery) }
+                                (marker.authorName ?: "").lowercase().contains(lowerCaseQuery) ||
+                                (lowerCaseQuery.startsWith("#") && (marker.description ?: "").lowercase().contains(lowerCaseQuery))
+                    }
 
                 }
                 Pair(filtered, query)
-            }.collect {(filteredPoint, query) ->
-                if(filteredPoint.isEmpty() && query.isNotBlank()){
+            }.collect { (filteredPoint, query) ->
+                if (filteredPoint.isEmpty() && query.isNotBlank()) {
                     _uiState.value = ListState.Error("Ничего не найдено")
                 }
                 _uiState.value = ListState.Success(filteredPoint)
@@ -58,18 +58,13 @@ class ListViewModel @Inject constructor(
             }
         }
     }
-    fun selectMarker(marker: UIMarker) {
-        _selectedMarker.value = marker
-    }
 
-    fun onToggleLike(markerId: String){
+
+
+    fun onToggleLike(markerId: String) {
         viewModelScope.launch {
-        toggleLikedUseCase(markerId)
+            toggleLikedUseCase(markerId)
         }
     }
 
-
-    fun dismissMarkerDetails() {
-        _selectedMarker.value = null
-    }
 }

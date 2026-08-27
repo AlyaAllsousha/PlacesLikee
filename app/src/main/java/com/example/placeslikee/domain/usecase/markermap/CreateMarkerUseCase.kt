@@ -1,18 +1,18 @@
 package com.example.placeslikee.domain.usecase.markermap
 
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
-import com.example.placeslikee.domain.repositories.MapRepository
+import com.example.placeslikee.domain.repositories.MarkRepository
 import java.util.UUID
 import javax.inject.Inject
 
 class CreateMarkerUseCase @Inject constructor(
-    private val repository: MapRepository
+    private val repository: MarkRepository
 ) {
     suspend operator fun invoke(
         lat: Double,
         lon: Double,
         name: String,
-        authorId: String,
+        authorId: String?,
         description: String?,
         image: String?,
     ) {

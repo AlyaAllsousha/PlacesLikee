@@ -1,6 +1,7 @@
 package com.example.placeslikee.presentation.navigation
 
 
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,35 +11,55 @@ import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.placeslikee.presentation.main.MainScreen
 import com.example.placeslikee.presentation.authentication.AuthScreen
 import com.example.placeslikee.presentation.favourite.FavouriteScreen
-import com.example.placeslikee.presentation.list.ListScreen
-import com.example.placeslikee.presentation.newmarker.CreateMarkerScreen
+import com.example.placeslikee.presentation.createmarker.CreateMarkerScreen
+import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 import com.example.placeslikee.presentation.profile.ProfileScreen
 import com.example.placeslikee.presentation.profile.editMarker.EditMarkerScreen
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavHostContainer(
     navController: NavHostController, padding: PaddingValues
 ) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val selectedMarkerIdFromNav = remember(navBackStackEntry) {
+        if (currentRoute == "${NavRoutes.MarkerDetails.routes}/{markerId}") {
+            navBackStackEntry?.arguments?.getString("markerId")
+        } else {
+            null
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = NavRoutes.Main.routes,
@@ -61,15 +82,20 @@ fun NavHostContainer(
             composable(
                 route = NavRoutes.Main.routes
             ) {
-                MainScreen(onNavigateToAuth = {
-                    navController.navigate(NavRoutes.Auth.routes)
-                }, onNavigateToProfile = {
-                    navController.navigate(NavRoutes.Profile.routes)
-                }, onNavigateToCreateMarker = { info ->
-                    navController.navigate("${NavRoutes.CreateMark.routes}/${info.lat}/${info.lon}")
-                }, onNavigateToEdit = {markerId ->
-                    navController.navigate("${NavRoutes.EditMarker.routes}/$markerId")
-                }
+                MainScreen(
+                    selectedMarkerId = selectedMarkerIdFromNav,
+                    onNavigateToAuth = {
+                        navController.navigate(NavRoutes.Auth.routes)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigate(NavRoutes.Profile.routes)
+                    },
+                    onNavigateToCreateMarker = { info ->
+                        navController.navigate("${NavRoutes.CreateMark.routes}/${info.lat}/${info.lon}")
+                    },
+                    onMarkerClick = { markerId ->
+                        navController.navigate("${NavRoutes.MarkerDetails.routes}/${markerId}")
+                    }
                 )
             }
             composable(NavRoutes.Auth.routes) {
@@ -89,10 +115,12 @@ fun NavHostContainer(
                         savedStateHandle.remove<String>("edit_message")
                     },
                     onNavigateToAuth = { navController.navigate(NavRoutes.Auth.routes) },
-                    onNavigateToEdit = {markerId ->
+                    onNavigateToEdit = { markerId ->
                         navController.navigate("${NavRoutes.EditMarker.routes}/$markerId")
-                    }
-                )
+                    },
+                    onMarkerClick = { markerId ->
+                        navController.navigate("${NavRoutes.MarkerDetails.routes}/${markerId}")
+                    })
             }
 
             composable(
@@ -106,33 +134,72 @@ fun NavHostContainer(
                         navController.popBackStack()
                     })
             }
-            composable (
+            composable(
                 route = NavRoutes.Favourite.routes
-            ){
+            ) {
                 FavouriteScreen(
                     onNavigateToAuth = {
-                           navController.navigate(NavRoutes.Auth.routes) 
+                        navController.navigate(NavRoutes.Auth.routes)
                     },
-                    onNavigateToEdit = {markerId ->
-                        navController.navigate("${NavRoutes.EditMarker.routes}/$markerId")
+                    onMarkerClick = { markerId ->
+                        navController.navigate("${NavRoutes.MarkerDetails.routes}/${markerId}")
                     }
                 )
             }
-            composable (
+            composable(
                 route = "${NavRoutes.EditMarker.routes}/{markerId}",
                 arguments = listOf(
                     navArgument("markerId") { type = NavType.StringType }
                 )
 
-            ){
+            ) {
                 EditMarkerScreen(
-                    onNavigateBack = {message ->
+                    onNavigateBack = { message ->
                         navController.previousBackStackEntry
                             ?.savedStateHandle
                             ?.set("edit_message", message)
                         navController.popBackStack()
                     }
                 )
+            }
+            dialog(
+                route = "${NavRoutes.MarkerDetails.routes}/{markerId}",
+                arguments = listOf(
+                    navArgument("markerId") { type = NavType.StringType }
+                ),
+                deepLinks = listOf(
+                    navDeepLink {
+                        uriPattern = "placeslikee://marker/{markerId}"
+                    }
+                ),
+                dialogProperties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = false
+                )
+            ) {
+                val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                val scope = rememberCoroutineScope()
+                val closeSheet: () -> Unit = {
+                    scope.launch {
+                        sheetState.hide()
+                        navController.popBackStack()
+                    }
+                }
+                ModalBottomSheet(
+                    onDismissRequest = {
+                        navController.popBackStack()
+                    },
+                    sheetState = sheetState,
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    MarkerDetailsContent(
+                        navigateToEdit = { markerId ->
+                            closeSheet()
+                            navController.navigate("${NavRoutes.EditMarker.routes}/$markerId")
+                        },
+                        onDismiss = closeSheet
+                    )
+                }
             }
 
         })
@@ -145,7 +212,6 @@ fun BottomNavigationBar(navController: NavController) {
     ) {
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
-        val scope = rememberCoroutineScope()
         Constants.BottomNavItems.forEach { navItem ->
             NavigationBarItem(
                 selected = currentRoute == navItem.route, onClick = {

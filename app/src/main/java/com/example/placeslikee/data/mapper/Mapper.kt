@@ -1,10 +1,12 @@
 package com.example.placeslikee.data.mapper
 
+import com.example.placeslikee.data.local.entities.FollowingEntity
 import com.example.placeslikee.data.local.entities.LikesEntity
 import com.example.placeslikee.data.local.entities.UserEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerWithAuthor
 import com.example.placeslikee.data.local.entities.SyncState
+import com.example.placeslikee.data.remote.dto.RemoteFollowing
 import com.example.placeslikee.data.remote.dto.RemoteLike
 import com.example.placeslikee.data.remote.dto.RemoteMarker
 import com.example.placeslikee.data.remote.dto.RemoteUser
@@ -41,7 +43,7 @@ fun MarkerWithAuthor.toUIMarker(): UIMarker {
         latitude = mark.lat,
         longitude = mark.longitude,
         name = mark.name,
-        authorId = mark.authorId ?: "",
+        authorId = mark.authorId,
         authorName = author?.name ?: "Неизвестный",
         description = mark.description,
         likedByUser = mark.likedByUser,
@@ -72,6 +74,7 @@ fun RemoteUser.toUserEntity(): UserEntity = UserEntity(
     syncState = SyncState.SYNCED,
     localTimestamp = remoteTimestamp
 )
+
 fun UserEntity.toRemoteUser(): RemoteUser = RemoteUser(
     id = id.trim(),
     name = name,
@@ -92,4 +95,16 @@ fun RemoteLike.toLikeEntity(): LikesEntity = LikesEntity(
     userId = userId,
     syncState = SyncState.SYNCED,
     localTimeStamp = remoteTimestamp ?: System.currentTimeMillis()
+)
+
+fun RemoteFollowing.toFollowingEntity(): FollowingEntity = FollowingEntity(
+    authorId = authorId,
+    authorName = authorName,
+    sync = SyncState.SYNCED,
+    subscribedAt = subscribedAt?.time ?: System.currentTimeMillis(),
+)
+
+fun FollowingEntity.toRemoteFollowing(): RemoteFollowing = RemoteFollowing(
+    authorId = authorId,
+    authorName = authorName
 )

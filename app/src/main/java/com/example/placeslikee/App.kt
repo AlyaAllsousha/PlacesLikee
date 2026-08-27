@@ -1,6 +1,7 @@
 package com.example.placeslikee
 
 import android.app.Application
+import android.content.Intent
 import android.util.Log
 import androidx.work.Configuration
 import androidx.hilt.work.HiltWorkerFactory
@@ -35,5 +36,6 @@ class App : Application(), Configuration.Provider {
         )
         MediaManager.init(this, config)
     }
+
 
 }

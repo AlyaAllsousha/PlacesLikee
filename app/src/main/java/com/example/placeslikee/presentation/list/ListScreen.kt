@@ -28,13 +28,12 @@ import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 @Composable
 fun ListScreen(
     viewModel: ListViewModel = hiltViewModel(),
-    onNavigateToEdit: (String) -> Unit,
+    onMarkerClick: (String) -> Unit,
     searchQuery: String = "",
-    ){
+) {
 
     val state by viewModel.uiState.collectAsState()
-    val selectedMarker by viewModel.selectedMarker.collectAsState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
 
     LaunchedEffect(searchQuery) {
         viewModel.setSearchQuery(searchQuery)
@@ -81,7 +80,7 @@ fun ListScreen(
                         ) { marker ->
                             MarkerItem(
                                 marker = marker,
-                                onClick = { viewModel.selectMarker(marker) },
+                                onClick = { onMarkerClick(marker.id) },
                                 onLikeClick = { viewModel.onToggleLike(marker.id) }
                             )
                         }
@@ -91,17 +90,6 @@ fun ListScreen(
         }
     }
 
-    selectedMarker?.let { marker ->
-        ModalBottomSheet (
-            onDismissRequest = { viewModel.dismissMarkerDetails() },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            MarkerDetailsContent(
-                markerId = marker.id,
-                navigateToEdit = onNavigateToEdit
-            )
-        }
-    }
+
 }
 

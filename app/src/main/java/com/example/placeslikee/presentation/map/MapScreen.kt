@@ -76,21 +76,16 @@ fun MapScreen(
     viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
     onNavigateToAuth: () -> Unit,
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
-    onNavigateToEdit: (String) -> Unit,
     searchQuery: String = "",
-    onMapClick: () -> Unit = {}
+    onMarkerClick: (String) -> Unit,
+    selectedMarkerId: String?,
+    onMapClick: () -> Unit
 ) {
     val state by viewModel.mapState.collectAsState()
 
     val context = LocalContext.current
     val mapView = MapViewHelper()
     val isFirstTimeLoading by viewModel.isFirstTimeLoading.collectAsState()
-
-    //saving the selected marker for showing its details
-    val selectedMarker by viewModel.selectedMarker.collectAsState()
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
 
     var userLocationLayer by remember { mutableStateOf<UserLocationLayer?>(null) }
 
@@ -150,6 +145,7 @@ fun MapScreen(
             val pointId = mapObject.userData as? String
             if (pointId != null) {
                 viewModel.onMapClick(MapEvent.onPointClick(pointId))
+                onMarkerClick(pointId)
             }
             true
         }
@@ -340,7 +336,7 @@ fun MapScreen(
         val imageProvider = ImageProvider.fromResource(context, R.drawable.marker_pointer)
 
         state.points.forEach { point ->
-            val isSelected = point.id == selectedMarker?.id
+            val isSelected = point.id == selectedMarkerId
             val initialScale = if (isSelected) 0.08f else 0.05f
             val placemark = mapObjects.addPlacemark(Point(point.latitude, point.longitude))
             val iconStyle = IconStyle().apply {
@@ -420,8 +416,8 @@ fun MapScreen(
         }
     }
 
-    LaunchedEffect(selectedMarker) {
-        val newSelectedId = selectedMarker?.id
+    LaunchedEffect(selectedMarkerId) {
+        val newSelectedId = selectedMarkerId
         previousSelectedId?.let { oldId ->
             if (oldId != newSelectedId) {
                 placemarksMap[oldId]?.let { placemark ->
@@ -462,19 +458,6 @@ fun MapScreen(
         previousSelectedId = newSelectedId
     }
 
-    selectedMarker?.let { marker ->
-        ModalBottomSheet(
-            onDismissRequest = {
-                viewModel.dismissMarkerDetails()
-            },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            MarkerDetailsContent(
-                markerId = marker.id,
-                navigateToEdit = onNavigateToEdit)
-        }
-    }
     DisposableEffect(Unit) {
         onDispose {
             mapView.mapWindow.map.removeInputListener(inputListener)

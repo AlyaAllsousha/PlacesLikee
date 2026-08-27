@@ -64,6 +64,19 @@ interface MarkerDao {
     """)
     fun getLikedMarkersByUser(userId: String): Flow<List<MarkerWithAuthor>>
 
+    @Query("UPDATE marks_table SET likedByUser = 0 ")
+    suspend fun deleteLikeForLogout()
+
+    @Query("""
+        UPDATE marks_table 
+        SET likedByUser = 1 
+        WHERE id IN (
+            SELECT markerId FROM likes_table 
+            WHERE userId = :userId AND syncState != 'PENDING_UNLIKED'
+        )
+    """)
+    suspend fun restoreLikesStateForUser(userId: String)
+
     @Transaction
     @Query("SELECT * FROM marks_table WHERE authorId = :userId AND synced != 'PENDING_DELETE'")
     fun getByUserId(userId: String): Flow<List<MarkerWithAuthor>>

@@ -60,15 +60,14 @@ class LikeRepositoryImpl @Inject constructor(
 
     }
 
+
     override fun getUsersLikedMarkers(): Flow<List<UIMarker>> {
         val userId = auth.uid ?: return flowOf(emptyList())
         syncWorkerScheduler.scheduleSingleSync()
         return localDB.markersDao().getLikedMarkersByUser(userId).map { markers ->
             markers.map {
-                it.toUIMarker().copy(likedByUser = true)
+                it.toUIMarker()
             }
         }
-
     }
-
 }

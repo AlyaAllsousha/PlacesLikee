@@ -10,8 +10,10 @@ import com.example.placeslikee.data.local.dao.LikesDao
 import com.example.placeslikee.data.local.dao.MarkerDao
 import com.example.placeslikee.data.local.dao.UsersDao
 import com.example.placeslikee.data.local.entities.SyncState
+import com.example.placeslikee.data.mapper.toFollowingEntity
 import com.example.placeslikee.data.mapper.toLikeEntity
 import com.example.placeslikee.data.mapper.toMarkerEntity
+import com.example.placeslikee.data.mapper.toRemoteFollowing
 import com.example.placeslikee.data.mapper.toRemoteLike
 import com.example.placeslikee.data.mapper.toRemoteMarker
 import com.example.placeslikee.data.mapper.toRemoteUser
@@ -19,10 +21,15 @@ import com.example.placeslikee.data.mapper.toUserEntity
 import com.example.placeslikee.data.remote.RemoteDB
 import com.example.placeslikee.data.remote.dto.RemoteMarker
 import com.example.placeslikee.data.remote.dto.RemoteUser
+import com.example.placeslikee.data.remote.notifications.PushNotificationRequest
+import com.example.placeslikee.data.remote.notifications.VercelApi
 import com.example.placeslikee.domain.repositories.AuthRepository
 import com.example.placeslikee.domain.repositories.ImageStorageRepository
 import com.example.placeslikee.domain.repositories.LikeRepository
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.messaging
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.collections.iterator
 
@@ -31,6 +38,7 @@ class MarkersSyncManager @Inject constructor(
     private val authRepository: AuthRepository,
     private val localDB: LocalDB,
     private val remoteDB: RemoteDB,
+    private val vercelApi: VercelApi,
     private val connectivityManager: ConnectivityManager,
     private val imageStorageRepository: ImageStorageRepository
 ) {
@@ -69,23 +77,35 @@ class MarkersSyncManager @Inject constructor(
             val remoteTimestamp = existingRemoteMark?.remoteTimestamp ?: 0L
             when (marker.synced) {
                 SyncState.PENDING_CREATE -> {
-                    var remoteImageUrl  = marker.image
-                    if(!marker.image.isNullOrEmpty()){
-                        try{
+                    var remoteImageUrl = marker.image
+                    if (!marker.image.isNullOrEmpty()) {
+                        try {
                             remoteImageUrl = imageStorageRepository.uploadImage(marker.image)
                             localDB.markersDao().updateMark(marker.copy(image = remoteImageUrl))
-                        }
-                        catch (e: Exception){
+                        } catch (e: Exception) {
                             Log.e("my log", "pushLocalChanges: Image upload failed $e")
                             throw e
                         }
                     }
                     val remoteMarker = marker.toRemoteMarker().copy(image = remoteImageUrl)
                     remoteDB.saveMarker(remoteMarker)
-                    if (marker.authorId != null)
+                    if (marker.authorId != null) {
+                        try {
+                            val author = userDao.getUserById(marker.authorId)
+                            val pushRequest = PushNotificationRequest(
+                                authorId = marker.authorId,
+                                authorName = author?.name ?: "Автор",
+                                markerName = marker.name,
+                                markerId = marker.id
+                            )
+                            vercelApi.sendNewMarkerNotification(pushRequest)
+                        } catch (e: Exception) {
+                            Log.e("my log", "pushLocalChanges: Send push error: ", e)
+                        }
                         remoteDB.saveUser(
                             userDao.getUserById(marker.authorId)!!.toRemoteUser()
                         )
+                    }
                 }
 
                 SyncState.PENDING_DELETE -> {
@@ -95,13 +115,12 @@ class MarkersSyncManager @Inject constructor(
 
                 SyncState.PENDING_UPDATE -> {
                     if (remoteTimestamp < marker.localTimestamp) {
-                        var remoteImageUrl  = marker.image
-                        if(!marker.image.isNullOrEmpty() && !marker.image.startsWith("http")){
-                            try{
+                        var remoteImageUrl = marker.image
+                        if (!marker.image.isNullOrEmpty() && !marker.image.startsWith("http")) {
+                            try {
                                 remoteImageUrl = imageStorageRepository.uploadImage(marker.image)
                                 localDB.markersDao().updateMark(marker.copy(image = remoteImageUrl))
-                            }
-                            catch (e: Exception){
+                            } catch (e: Exception) {
                                 Log.e("my log", "pushLocalChanges: Image upload failed $e")
                                 throw e
                             }
@@ -157,6 +176,33 @@ class MarkersSyncManager @Inject constructor(
             }
 
         }
+
+        val localFollowings = localDB.followingDao().getAllFollowsForSync()
+        if (currUserId != null && localFollowings.isNotEmpty()) {
+            val remoteFollowMap = remoteDB.getFollowing(currUserId).associateBy { it.authorId }
+            for (follow in localFollowings) {
+                try {
+                    if (follow.sync == SyncState.PENDING_DELETE) {
+                        remoteDB.deleteFollow(currUserId, follow.authorId)
+                        localDB.followingDao().deleteSubscription(follow.authorId)
+                        Firebase.messaging.unsubscribeFromTopic("author_${follow.authorId}").await()
+                    } else if (follow.sync == SyncState.PENDING_CREATE) {
+                        remoteDB.saveFollow(currUserId, follow.toRemoteFollowing())
+                        localDB.followingDao()
+                            .markFollowAsSynced(follow.authorId, SyncState.PENDING_CREATE)
+                        Firebase.messaging.subscribeToTopic("author_${follow.authorId}").await()
+                    } else if (follow.sync == SyncState.SYNCED) {
+                        if (!remoteFollowMap.containsKey(follow.authorId)) {
+                            localDB.followingDao().deleteSubscription(follow.authorId)
+                            Firebase.messaging.unsubscribeFromTopic("author_${follow.authorId}").await()
+                        }
+                    }
+                }
+                catch(e: Exception){
+                    Log.e("my log", "pushLocalChanges: Follow failed for ${follow.authorId} ", e )
+                }
+            }
+        }
     }
 
     private suspend fun pullRemoteChanges(
@@ -193,7 +239,19 @@ class MarkersSyncManager @Inject constructor(
                 )
                     localDB.likesDao().createLike(like.toLikeEntity())
             }
+            localDB.markersDao().restoreLikesStateForUser(auth.uid!!)
+
+            val remoteFollows = remoteDB.getFollowing(auth.uid!!)
+            for(remoteFollow in remoteFollows){
+                val existingLocalFollow = localDB.followingDao().getFollowById(remoteFollow.authorId)
+
+                if(existingLocalFollow == null){
+                    localDB.followingDao().insertSubscription(remoteFollow.toFollowingEntity())
+                    Firebase.messaging.subscribeToTopic("author_${remoteFollow.authorId}").await()
+                }
+            }
         }
+
     }
 
     private fun isNetworkAvailable(): Boolean {

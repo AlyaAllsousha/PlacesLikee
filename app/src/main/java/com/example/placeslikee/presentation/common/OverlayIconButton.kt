@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun OverlayIconButton(
     icon: ImageVector,
+    backgroundColor: Color? = Color.Black.copy(alpha = 0.5f),
     tint: Color,
     onClick: () -> Unit
 ) {
@@ -21,7 +22,7 @@ fun OverlayIconButton(
         onClick = onClick,
         modifier = Modifier
             .size(36.dp)
-            .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
+            .background(if(backgroundColor != null) backgroundColor else Color.Transparent, shape = CircleShape)
     ) {
         Icon(
             imageVector = icon,

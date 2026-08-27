@@ -86,12 +86,12 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onNavigateToAuth: () -> Unit,
     onNavigateToEdit: (String) -> Unit,
+    onMarkerClick: (String) -> Unit,
     externalSnackbarMessage: String? = null,
     onClearSnackbarMessage: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val isEmailChanging by viewModel.isEmailChanging.collectAsState()
-    val selectedMarker by viewModel.selectedMarker.collectAsState()
 
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showEditEmailDialog by remember { mutableStateOf(false) }
@@ -111,9 +111,7 @@ fun ProfileScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         rememberTopAppBarState()
     )
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
+
 
     LaunchedEffect(isImeVisible) {
         if (!isImeVisible) {
@@ -211,7 +209,6 @@ fun ProfileScreen(
                 containerColor = MaterialTheme.colorScheme.background
             ) { paddingValues ->
 
-
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -297,7 +294,6 @@ fun ProfileScreen(
                             Box(
                                 modifier = Modifier
                                     .padding(horizontal = 16.dp)
-
                             ) {
                                 MarkerItem(
                                     marker = marker,
@@ -308,7 +304,7 @@ fun ProfileScreen(
                                     onDeleteClick = { viewModel.deleteMarker(marker.id) },
                                     onLikeClick = { viewModel.onToggleLike(marker.id) },
                                     onClick = {
-                                        viewModel.onMarkerClick(marker.id)
+                                        onMarkerClick(marker.id)
                                     },
                                     isProfile = true,
                                 )
@@ -357,19 +353,6 @@ fun ProfileScreen(
         }
     }
 }
-    selectedMarker?.let { marker ->
-        ModalBottomSheet(
-            onDismissRequest = {
-                viewModel.dismissMarkerDetails()
-            },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            MarkerDetailsContent(
-                markerId = marker.id,
-                navigateToEdit = onNavigateToEdit)
-        }
-    }
 }
 
 @Composable

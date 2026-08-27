@@ -58,11 +58,9 @@ import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 fun FavouriteScreen(
     viewModel: FavouriteViewModel = hiltViewModel(),
     onNavigateToAuth: () -> Unit,
-    onNavigateToEdit: (String) -> Unit,
+    onMarkerClick: (String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    val selectedMarker by viewModel.selectedMarker.collectAsState()
 
     val inputQuery by viewModel.inputQuery.collectAsState()
     val appliedQuery by viewModel.appliedQuery.collectAsState()
@@ -70,9 +68,7 @@ fun FavouriteScreen(
 
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
+
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         rememberTopAppBarState()
     )
@@ -170,7 +166,7 @@ fun FavouriteScreen(
                                         onClick = {
                                             keyboardController?.hide()
                                             focusManager.clearFocus()
-                                            viewModel.onMarkerClick(marker.id)
+                                            onMarkerClick(marker.id)
                                         }
                                     )
                                 }
@@ -197,19 +193,7 @@ fun FavouriteScreen(
             }
         }
     }
-    selectedMarker?.let { marker ->
-        ModalBottomSheet(
-            onDismissRequest = {
-                viewModel.dismissMarkerDetails()
-            },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            MarkerDetailsContent(
-                markerId = marker.id,
-                navigateToEdit = onNavigateToEdit)
-        }
-    }
+
 }
 
 @Composable

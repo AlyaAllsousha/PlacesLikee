@@ -5,6 +5,7 @@ import androidx.compose.runtime.currentComposer
 import com.example.placeslikee.data.local.entities.LikesEntity
 import com.example.placeslikee.data.local.entities.UserEntity
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
+import com.example.placeslikee.data.remote.dto.RemoteFollowing
 import com.example.placeslikee.data.remote.dto.RemoteLike
 import com.example.placeslikee.data.remote.dto.RemoteMarker
 import com.example.placeslikee.data.remote.dto.RemoteUser
@@ -143,4 +144,63 @@ class RemoteDB @Inject constructor(
         collectionLikes.document(like.id).delete()
     }
 
+    suspend fun saveFollow(currentUserId: String, follow: RemoteFollowing) {
+        try {
+            collectionUsers.document(currentUserId)
+                .collection("following")
+                .document(follow.authorId)
+                .set(follow)
+                .await()
+        } catch (e: Exception) {
+            Log.e("my log", "saveFollow error: $e")
+            throw e
+        }
+    }
+
+    suspend fun deleteFollow(currentUserId: String, authorId: String) {
+        try {
+            collectionUsers.document(currentUserId)
+                .collection("following")
+                .document(authorId)
+                .delete()
+                .await()
+        } catch (e: Exception) {
+            Log.e("my log", "deleteFollow error: $e")
+            throw e
+        }
+    }
+
+    suspend fun getFollowing(currentUserId: String): List<RemoteFollowing> {
+        return try {
+            val snapshot = collectionUsers.document(currentUserId)
+                .collection("following")
+                .get()
+                .await()
+            snapshot.documents.mapNotNull { doc ->
+                doc.toObject(RemoteFollowing::class.java)
+            }
+        } catch (e: Exception) {
+            Log.e("my log", "getFollowing error: $e")
+            emptyList()
+        }
+    }
+
+    suspend fun getFollowingByAuthorId(currentUserId: String, authorId: String): RemoteFollowing? {
+        return try {
+            val snapshot = collectionUsers.document(currentUserId)
+                .collection("following")
+                .document(authorId)
+                .get()
+                .await()
+
+            if (snapshot.exists()) {
+                snapshot.toObject(RemoteFollowing::class.java)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("my log", "getFollowingByAuthorId error: $e")
+            null
+        }
+    }
 }

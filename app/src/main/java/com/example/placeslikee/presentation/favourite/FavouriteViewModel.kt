@@ -20,17 +20,13 @@ class FavouriteViewModel @Inject constructor(
     private val getLikedMarksUseCase: GetLikedMarksUseCase,
     private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
     private val toggleLikedUseCase: ToggleLikedUseCase
-): ViewModel() {
+) : ViewModel() {
     private val _uiState = MutableStateFlow<FavouriteState>(FavouriteState.Idle)
     val uiState = _uiState.asStateFlow()
 
     //Defence from liking spam
     private var isLiking = false
     private var lastClickTime = 0L
-
-    //Checking whether any marker is chosen
-    private val _selectedMarker = MutableStateFlow<UIMarker?>(null)
-    val selectedMarker = _selectedMarker.asStateFlow()
 
     private val _inputQuery = MutableStateFlow("")
     val inputQuery = _inputQuery.asStateFlow()
@@ -54,7 +50,7 @@ class FavouriteViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init{
+    init {
         loadLikedMarks()
     }
 
@@ -65,30 +61,25 @@ class FavouriteViewModel @Inject constructor(
                 combine(
                     getLikedMarksUseCase(),
                     _appliedQuery
-                ){marks, query ->
-                    if(query.isBlank()){
+                ) { marks, query ->
+                    if (query.isBlank()) {
                         marks
-                    }
-                    else{
-                        val lowerQuery= query.lowercase()
-                        marks.filter{
+                    } else {
+                        val lowerQuery = query.lowercase()
+                        marks.filter {
                             it.name.lowercase().contains(lowerQuery) ||
-                                    (it.authorName ?: "").lowercase().contains(lowerQuery)
+                                    (it.authorName ?: "").lowercase().contains(lowerQuery) ||
+                                    (lowerQuery.startsWith("#") && (it.description
+                                        ?: "").lowercase().contains(lowerQuery))
+
                         }
                     }
                 }.collect { filteredMarks ->
                     _uiState.value = FavouriteState.Success(filteredMarks)
                 }
             }
-        }
-        else{
+        } else {
             _uiState.value = FavouriteState.Unauthorized
-        }
-    }
-    fun onMarkerClick(id: String){
-        if(uiState.value is FavouriteState.Success){
-            val marker = (uiState.value as FavouriteState.Success).markers.find { it.id == id }
-            _selectedMarker.value = marker
         }
     }
 
@@ -108,7 +99,7 @@ class FavouriteViewModel @Inject constructor(
         _appliedQuery.value = _inputQuery.value
     }
 
-    fun onToggleLike(markerId: String){
+    fun onToggleLike(markerId: String) {
         val currentTime = System.currentTimeMillis()
         if (isLiking || currentTime - lastClickTime < 500) return
         isLiking = true
@@ -116,14 +107,11 @@ class FavouriteViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 toggleLikedUseCase(markerId)
-            }
-            finally {
+            } finally {
                 isLiking = false
             }
         }
     }
-    fun dismissMarkerDetails() {
-        _selectedMarker.value = null
-    }
+
 
 }

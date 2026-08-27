@@ -1,4 +1,4 @@
-package com.example.placeslikee.presentation.newmarker
+package com.example.placeslikee.presentation.createmarker
 
 sealed interface NewMarkerState{
     data object Loading: NewMarkerState

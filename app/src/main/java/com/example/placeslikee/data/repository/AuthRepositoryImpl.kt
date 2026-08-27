@@ -10,15 +10,19 @@ import com.example.placeslikee.data.remote.RemoteDB
 import com.example.placeslikee.data.remote.dto.RemoteUser
 import com.example.placeslikee.domain.repositories.AuthRepository
 import com.example.placeslikee.workmanger.SyncWorkerScheduler
+import com.google.firebase.Firebase
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
+import com.google.firebase.messaging.messaging
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 
@@ -37,6 +41,7 @@ class AuthRepositoryImpl @Inject constructor(
             val userId = result.user?.uid ?: throw Exception("User not found")
             syncUserData(userId)
             syncScheduler.scheduleSingleSync()
+
             Result.success(userId)
         } catch (e: Exception) {
             Log.d("my log", "AuthRepoImpl: Login failed: ${e.message} ")
@@ -91,7 +96,8 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun changeUserInfo(id: String, name: String) {
         val currUser = localDB.usersDao().getUserById(id)
-        localDB.usersDao().createUser(currUser!!.copy(name = name, localTimestamp = System.currentTimeMillis()))
+        localDB.usersDao()
+            .createUser(currUser!!.copy(name = name, localTimestamp = System.currentTimeMillis()))
         syncScheduler.scheduleSingleSync()
     }
 
@@ -109,26 +115,37 @@ class AuthRepositoryImpl @Inject constructor(
             user.verifyBeforeUpdateEmail(email).await()
             syncScheduler.scheduleSingleSync()
             Result.success(email)
-        }
-         catch (e: Exception) {
-             Log.e("my log", "changeUserEmail: ${e.message}", e)
+        } catch (e: Exception) {
+            Log.e("my log", "changeUserEmail: ${e.message}", e)
             Result.failure(e)
         }
     }
 
-     override suspend fun logout() {
-        localDB.likesDao().deleteAllLikes()
-        auth.signOut()
+    override suspend fun logout() {
+        withContext(Dispatchers.IO) {
+            try {
+                localDB.likesDao().deleteAllLikes()
+                localDB.markersDao().deleteLikeForLogout()
+                localDB.followingDao().deleteAllFollows()
+
+                Firebase.messaging.deleteToken().await()
+
+            } catch (e: Exception) {
+                Log.e("Logout", "Ошибка при очистке данных: ${e.message}")
+            } finally {
+                auth.signOut()
+            }
+        }
     }
 
     override suspend fun syncAuthData() {
         val user = auth.currentUser ?: return
-        try{
+        try {
             user.reload().await()
             val actualFirebaseEmail = auth.currentUser?.email ?: return
             val localUser = localDB.usersDao().getUserById(user.uid) ?: return
 
-            if(localUser.email != actualFirebaseEmail){
+            if (localUser.email != actualFirebaseEmail) {
                 localDB.usersDao().createUser(
                     localUser.copy(
                         email = actualFirebaseEmail,
@@ -136,8 +153,8 @@ class AuthRepositoryImpl @Inject constructor(
                     )
                 )
             }
+        } catch (e: Exception) {
         }
-        catch (e: Exception){ }
     }
 
     private suspend fun syncUserData(userId: String) {

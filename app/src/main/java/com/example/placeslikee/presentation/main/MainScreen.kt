@@ -92,10 +92,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
+    selectedMarkerId: String?,
     onNavigateToAuth: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
-    onNavigateToEdit: (String) -> Unit,
+    onMarkerClick: (String) -> Unit,
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val user by viewModel.currentUser.collectAsState()
@@ -228,11 +229,13 @@ fun MainScreen(
                                             onNavigateToCreateMarker(it)
                                         }
                                     },
-                                    onNavigateToEdit = onNavigateToEdit,
                                     onMapClick = {
                                         focusManager.clearFocus()
                                         keyboardController?.hide()
-                                    }
+                                    },
+
+                                    onMarkerClick = onMarkerClick,
+                                    selectedMarkerId = selectedMarkerId
                                 )
 
                                 RefreshButton(
@@ -248,7 +251,8 @@ fun MainScreen(
                         isMapVisible = false
                         ListScreen(
                             searchQuery = appliedQuery,
-                            onNavigateToEdit = onNavigateToEdit)
+                            onMarkerClick = onMarkerClick,
+                        )
                     }
                     DropdownSearchResults(
                         visible = inputQuery.isNotEmpty() && searchResults.isNotEmpty() && inputQuery != appliedQuery,

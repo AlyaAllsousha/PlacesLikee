@@ -3,9 +3,12 @@ package com.example.placeslikee.presentation.common
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.LocationOn
@@ -19,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -63,9 +67,9 @@ fun MarkerItem(
                         showDeleteDialog = true
                     },
                     isProfile = isProfile
-
                 )
             }
+
 
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -105,9 +109,8 @@ fun MarkerItem(
                 } else {
                     Spacer(modifier = Modifier.height(4.dp))
                 }
-                if (!isProfile) {
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                if (!isProfile) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -163,21 +166,61 @@ fun MarkerItem(
                             )
                         }
                     }
+                } else if (marker.image.isNullOrEmpty()){
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        FilledTonalIconButton(
+                            onClick = onEditClick,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Редактировать",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        FilledTonalIconButton(
+                            onClick = {
+                                showDeleteDialog = true
+                            },
+                            modifier = Modifier.size(40.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Удалить",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (showDeleteDialog) {
+                    AlertDeleteDialog(
+                        onDismissRequest = { showDeleteDialog = false },
+                        markerName = marker.name,
+                        onConfirmButtonClick = {
+                            showDeleteDialog = false
+                            onDeleteClick()
+                        },
+                        onDismissButtonClick = { showDeleteDialog = false }
+
+                    )
                 }
             }
         }
-    }
-
-    if (showDeleteDialog) {
-        AlertDeleteDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            markerName =  marker.name,
-            onConfirmButtonClick = {
-                showDeleteDialog = false
-                onDeleteClick()
-            },
-            onDismissButtonClick = { showDeleteDialog = false }
-
-        )
     }
 }

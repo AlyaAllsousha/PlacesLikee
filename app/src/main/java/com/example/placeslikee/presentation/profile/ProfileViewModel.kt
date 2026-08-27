@@ -49,8 +49,7 @@ class ProfileViewModel @Inject constructor(
     private var isLiking = false
     private var lastClickTime = 0L
 
-    private val _selectedMarker = MutableStateFlow<UIMarker?>(null)
-    val selectedMarker =_selectedMarker.asStateFlow()
+
 
     //Search query
     private val _inputQuery = MutableStateFlow("")
@@ -59,8 +58,6 @@ class ProfileViewModel @Inject constructor(
     private val _appliedQuery = MutableStateFlow("")
     val appliedQuery = _appliedQuery.asStateFlow()
 
-    private val _selectedPlace = MutableStateFlow("")
-    val selectedPlace = _selectedPlace.asStateFlow()
 
     val searchResults = combine(
         getUsersMarkerUseCase(),
@@ -72,7 +69,8 @@ class ProfileViewModel @Inject constructor(
             val lowerQuery = query.lowercase()
             markers.filter {
                 it.name.lowercase().contains(lowerQuery) ||
-                        (it.authorName ?: "").lowercase().contains(lowerQuery)
+                        (it.authorName ?: "").lowercase().contains(lowerQuery) ||
+                        (lowerQuery.startsWith("#") && (it.description ?: "").lowercase().contains(lowerQuery))
             }
         }
 
@@ -106,7 +104,9 @@ class ProfileViewModel @Inject constructor(
                             val lowerQuery = query.lowercase()
                             val markersList = markers.filter{
                                 it.name.lowercase().contains(lowerQuery) ||
-                                        (it.authorName ?: "").lowercase().contains(lowerQuery)
+                                        (it.authorName ?: "").lowercase().contains(lowerQuery) ||
+                                        (lowerQuery.startsWith("#") && (it.description ?: "").lowercase().contains(lowerQuery))
+
                             }
                             ProfileState.Success(
                                 markersList = markersList,
@@ -145,16 +145,8 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun onMarkerClick(id: String){
-        if(_state.value is ProfileState.Success){
-            val marker = (state.value as ProfileState.Success).markersList.find { it.id == id }
-            _selectedMarker.value = marker
-        }
-    }
 
-    fun dismissMarkerDetails() {
-        _selectedMarker.value = null
-    }
+
 
     fun onToggleLike(markerId: String){
         val currentTime = System.currentTimeMillis()

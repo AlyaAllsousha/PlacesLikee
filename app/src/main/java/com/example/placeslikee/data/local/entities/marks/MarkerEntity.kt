@@ -7,7 +7,7 @@ import com.example.placeslikee.data.local.entities.SyncState
 @Entity("marks_table")
 data class MarkerEntity(
  @PrimaryKey
-    val id: String,
+ val id: String,
  val lat: Double,
  val longitude: Double,
  val name:String,

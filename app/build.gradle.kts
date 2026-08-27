@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.placeslikee"
-        minSdk = 31
+        minSdk = 28
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -57,6 +57,7 @@ android {
 dependencies {
     //Room
     implementation("androidx.room:room-runtime:2.6.1")
+    implementation(libs.firebase.messaging)
     ksp("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
 
@@ -82,6 +83,7 @@ dependencies {
 
     //Firebase
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
     implementation(libs.googleid)

@@ -1,14 +1,13 @@
 package com.example.placeslikee.data.repository
 
-import android.util.Log
 import com.example.placeslikee.data.local.LocalDB
 import com.example.placeslikee.data.local.entities.SyncState
 import com.example.placeslikee.data.local.entities.marks.MarkerEntity
-import com.example.placeslikee.data.local.entities.marks.MarkerWithAuthor
 import com.example.placeslikee.data.mapper.toMarkerEntity
 import com.example.placeslikee.data.mapper.toUIMarker
+import com.example.placeslikee.data.remote.notifications.VercelApi
 import com.example.placeslikee.domain.models.UIMarker
-import com.example.placeslikee.domain.repositories.MapRepository
+import com.example.placeslikee.domain.repositories.MarkRepository
 import com.example.placeslikee.workmanger.SyncWorkerScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,10 +15,10 @@ import kotlinx.coroutines.flow.onStart
 import javax.inject.Inject
 
 
-class MapRepositoryImpl @Inject constructor(
+class MarkRepositoryImpl @Inject constructor(
     private val localDb: LocalDB,
     private val syncScheduler: SyncWorkerScheduler,
-) : MapRepository {
+) : MarkRepository {
 
     override fun getMarkers(): Flow<List<UIMarker>> {
         return localDb.markersDao().getMarkers()

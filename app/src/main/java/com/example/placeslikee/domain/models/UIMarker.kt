@@ -6,7 +6,7 @@ data class UIMarker(
     val longitude: Double,
     val name:String,
     val authorName: String?  ,
-    val authorId: String = "",
+    val authorId: String?,
     val description: String?,
     val likesAmount: Int = 0,
     val likedByUser: Boolean = false,
