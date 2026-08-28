@@ -11,5 +11,6 @@ data class UIMarker(
     val likesAmount: Int = 0,
     val likedByUser: Boolean = false,
     val image: String?,
+    val createdAt: Long,
     val uiTimestamp: Long
 )

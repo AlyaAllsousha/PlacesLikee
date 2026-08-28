@@ -48,13 +48,15 @@ class ListViewModel @Inject constructor(
                     }
 
                 }
-                Pair(filtered, query)
+                val sortedAndFiltered = filtered.sortedByDescending { it.createdAt}
+
+                Pair(sortedAndFiltered, query)
             }.collect { (filteredPoint, query) ->
                 if (filteredPoint.isEmpty() && query.isNotBlank()) {
                     _uiState.value = ListState.Error("Ничего не найдено")
-                }
+                } else{
                 _uiState.value = ListState.Success(filteredPoint)
-
+                }
             }
         }
     }

@@ -26,6 +26,11 @@ android {
             name = "MAPKIT_API_KEY",
             value = "\"${rootProject.extra["mapkitApiKey"]}\""
         )
+        buildConfigField(
+            type = "String",
+            name = "CLOUDINARY_CLOUD_NAME",
+            value = "\"${rootProject.extra["cloudinaryCloudName"]}\""
+        )
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }

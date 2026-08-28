@@ -135,7 +135,6 @@ fun MainScreen(
 
     Scaffold(
         modifier = Modifier
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
@@ -152,7 +151,6 @@ fun MainScreen(
                     else navigateSafely { onNavigateToAuth() }
                 },
                 isLoggedIn = user != null,
-                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
@@ -252,6 +250,8 @@ fun MainScreen(
                         ListScreen(
                             searchQuery = appliedQuery,
                             onMarkerClick = onMarkerClick,
+                            isRefreshing = isRefreshing,
+                            onRefresh = viewModel::refresh
                         )
                     }
                     DropdownSearchResults(
@@ -289,7 +289,6 @@ private fun MainTopBar(
     isLoggedIn: Boolean,
     onProfileClick: () -> Unit,
     onAuthClick: () -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior
 ) {
     TopAppBar(
         title =
@@ -378,8 +377,7 @@ private fun MainTopBar(
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
                 )
             }
-        },
-        scrollBehavior = scrollBehavior
+        }
     )
 
 }

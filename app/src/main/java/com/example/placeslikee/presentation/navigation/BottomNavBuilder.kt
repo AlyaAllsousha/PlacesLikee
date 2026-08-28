@@ -168,9 +168,8 @@ fun NavHostContainer(
                     navArgument("markerId") { type = NavType.StringType }
                 ),
                 deepLinks = listOf(
-                    navDeepLink {
-                        uriPattern = "placeslikee://marker/{markerId}"
-                    }
+                    navDeepLink { uriPattern = "placeslikee://marker/{markerId}" },
+                    navDeepLink { uriPattern = "https://placesli.web.app/marker/{markerId}" }
                 ),
                 dialogProperties = DialogProperties(
                     usePlatformDefaultWidth = false,

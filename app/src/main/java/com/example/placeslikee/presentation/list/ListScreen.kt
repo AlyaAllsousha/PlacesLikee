@@ -11,6 +11,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,66 +33,88 @@ fun ListScreen(
     viewModel: ListViewModel = hiltViewModel(),
     onMarkerClick: (String) -> Unit,
     searchQuery: String = "",
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit
 ) {
 
     val state by viewModel.uiState.collectAsState()
 
+    val pullToRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(searchQuery) {
         viewModel.setSearchQuery(searchQuery)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize(),
+        state = pullToRefreshState,
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                state = pullToRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        }
     ) {
-        when (val currentState = state) {
-            is ListState.Loading -> {
-                LoadingBox()
-            }
-
-            is ListState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = currentState.message,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            when (val currentState = state) {
+                is ListState.Loading -> {
+                    LoadingBox()
                 }
-            }
 
-            is ListState.Success -> {
-                if (currentState.markers.isEmpty()) {
+                is ListState.Error -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Ничео не найдено",
+                            text = currentState.message,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.outline
                         )
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 80.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(
-                            items = currentState.markers,
-                            key = { it.id }
-                        ) { marker ->
-                            MarkerItem(
-                                marker = marker,
-                                onClick = { onMarkerClick(marker.id) },
-                                onLikeClick = { viewModel.onToggleLike(marker.id) }
+                }
+
+                is ListState.Success -> {
+                    if (currentState.markers.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Ничео не найдено",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.outline
                             )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 80.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(
+                                items = currentState.markers,
+                                key = { it.id }
+                            ) { marker ->
+                                MarkerItem(
+                                    marker = marker,
+                                    onClick = { onMarkerClick(marker.id) },
+                                    onLikeClick = { viewModel.onToggleLike(marker.id) }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
-
 
 }
 

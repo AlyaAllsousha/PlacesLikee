@@ -11,16 +11,16 @@ plugins {
 }
 
 
-fun getMapkitApiKey(): String {
+fun getLocalProperty(propertyName: String, defaultValue: String = ""): String {
     val properties = Properties()
     val file = project.rootProject.file("local.properties")
     if (file.exists()) {
         file.inputStream().use { properties.load(it) }
     }
-    return properties.getProperty("MAPKIT_API_KEY", "")
+    return properties.getProperty(propertyName, defaultValue)
 }
 
 extra.apply {
-    set("mapkitApiKey", getMapkitApiKey())
+    set("mapkitApiKey", getLocalProperty("MAPKIT_API_KEY"))
+    set("cloudinaryCloudName", getLocalProperty("CLOUDINARY_CLOUD_NAME"))
 }
-

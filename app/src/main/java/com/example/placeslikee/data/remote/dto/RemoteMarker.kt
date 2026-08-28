@@ -12,5 +12,6 @@ data class RemoteMarker(
     val image: String? = null,
     val likesAmount: Int = 0,
     val locationName: String = "",
+    val createdAt: Long? = null,
     val remoteTimestamp: Long? = null
 )

@@ -52,11 +52,13 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -111,19 +113,21 @@ fun MarkerDetailsContent(
                         showDeleteDialog = true
                     }
                 )
-                if (showDeleteDialog) {
-                    AlertDeleteDialog(
-                        onDismissRequest = { showDeleteDialog = false },
-                        markerName = marker.name,
-                        onConfirmButtonClick = {
-                            showDeleteDialog = false
-                            viewModel.onDeleteMarker()
-                            onDismiss()
 
-                        },
-                        onDismissButtonClick = { showDeleteDialog = false }
+                    if (showDeleteDialog) {
+                        AlertDeleteDialog(
+                            onDismissRequest = { showDeleteDialog = false },
+                            markerName = marker.name,
+                            isFullWidth = true,
+                            onConfirmButtonClick = {
+                                showDeleteDialog = false
+                                viewModel.onDeleteMarker()
+                                onDismiss()
+                            },
+                            onDismissButtonClick = { showDeleteDialog = false }
 
-                    )
+                        )
+
                 }
             }
 
@@ -174,10 +178,19 @@ private fun MarkerDetailsBody(
         ) {
 
             Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                AuthorRow(
+                    modifier = Modifier.weight(1f),
+                    authorName = marker.authorName
+                )
+            }
+            Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+
                 Text(
                     text = marker.name,
                     style = MaterialTheme.typography.headlineSmall,
@@ -206,7 +219,7 @@ private fun MarkerDetailsBody(
 
 
                         FilledTonalIconButton(
-                            onClick = {  },
+                            onClick = onDelete,
                             modifier = Modifier.size(40.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -260,17 +273,32 @@ private fun MarkerDetailsBody(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().offset(x= (-12).dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
 
-                AuthorRow(
-                    modifier = Modifier.weight(1f),
-                    authorName = marker.authorName
-                )
+                IconButton(
+                    onClick = {
+                        val deepLink = "https://placesli.web.app/marker/${marker.id}"
+                        val textToShare = "Смотри какое крутое место «${marker.name}» в приложении PlacesLikee!\n\n$deepLink"
+                        val sendIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, textToShare)
+                            type = "text/plain"
+                        }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                        val shareIntent = Intent.createChooser(sendIntent, "Поделиться местом")
+                        context.startActivity(shareIntent)
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Share,
+                        contentDescription = "Поделиться",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
+                Spacer(modifier = Modifier.width(4.dp))
                 LikeButton(
                     liked = marker.likedByUser,
                     likesAmount = marker.likesAmount,
@@ -481,13 +509,13 @@ private fun DeletedMarkerState() {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Место было удалено",
+                text = "Загрузка...",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Автор удалил эту локацию.",
+                text = "Место загружается.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )

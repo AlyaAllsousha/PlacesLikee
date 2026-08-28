@@ -17,5 +17,6 @@ data class MarkerEntity(
  val likedByUser: Boolean = false,
  val image: String?,
  val synced: SyncState = SyncState.PENDING_CREATE,
+ val createdAt: Long = System.currentTimeMillis(),
  val localTimestamp: Long = System.currentTimeMillis()
 )

@@ -32,9 +32,9 @@ class App : Application(), Configuration.Provider {
         MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
         MapKitFactory.initialize(this)
         val config = mapOf(
-            "cloud_name" to "elezs5h0"
+            "cloud_name" to BuildConfig.CLOUDINARY_CLOUD_NAME
         )
-        MediaManager.init(this, config)
+        MediaManager.init(this,config )
     }
 
 

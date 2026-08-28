@@ -21,6 +21,7 @@ fun MarkerEntity.toRemoteMarker(): RemoteMarker = RemoteMarker(
     image = image,
     likesAmount = likesAmount,
     locationName = name,
+    createdAt = createdAt,
     remoteTimestamp = localTimestamp
 )
 
@@ -34,7 +35,8 @@ fun RemoteMarker.toMarkerEntity(): MarkerEntity = MarkerEntity(
     likesAmount = likesAmount,
     synced = SyncState.SYNCED,
     image = image,
-    localTimestamp = remoteTimestamp ?: 0
+    createdAt = createdAt ?: 0L,
+    localTimestamp = remoteTimestamp ?: 0L
 )
 
 fun MarkerWithAuthor.toUIMarker(): UIMarker {
@@ -49,6 +51,7 @@ fun MarkerWithAuthor.toUIMarker(): UIMarker {
         likedByUser = mark.likedByUser,
         likesAmount = mark.likesAmount,
         image = mark.image,
+        createdAt = mark.createdAt,
         uiTimestamp = mark.localTimestamp
     )
 }
@@ -63,6 +66,7 @@ fun UIMarker.toMarkerEntity(): MarkerEntity = MarkerEntity(
     likesAmount = likesAmount,
     likedByUser = likedByUser,
     image = image,
+    createdAt = System.currentTimeMillis(),
     localTimestamp = uiTimestamp
 )
 

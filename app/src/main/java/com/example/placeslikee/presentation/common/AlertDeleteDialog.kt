@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,17 +27,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.example.placeslikee.R
 
 @Composable
 fun AlertDeleteDialog(
     onDismissRequest: () -> Unit,
     markerName: String,
+    isFullWidth: Boolean = false,
     onConfirmButtonClick: () -> Unit,
     onDismissButtonClick: () -> Unit
 
 ){
     AlertDialog(
+        modifier = Modifier
+            .fillMaxWidth(if(isFullWidth)0.8f else 1f)
+            .widthIn(max = 400.dp),
         onDismissRequest = onDismissRequest,
         icon = {
             Surface(
@@ -111,6 +118,7 @@ fun AlertDeleteDialog(
                 Text("Отмена", fontWeight = FontWeight.Medium)
             }
         },
+
         shape = RoundedCornerShape(28.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 6.dp

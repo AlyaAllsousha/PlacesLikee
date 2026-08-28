@@ -62,7 +62,7 @@ class FavouriteViewModel @Inject constructor(
                     getLikedMarksUseCase(),
                     _appliedQuery
                 ) { marks, query ->
-                    if (query.isBlank()) {
+                    val filtered = if (query.isBlank()) {
                         marks
                     } else {
                         val lowerQuery = query.lowercase()
@@ -74,6 +74,7 @@ class FavouriteViewModel @Inject constructor(
 
                         }
                     }
+                    filtered.sortedByDescending { it.uiTimestamp }
                 }.collect { filteredMarks ->
                     _uiState.value = FavouriteState.Success(filteredMarks)
                 }
