@@ -54,10 +54,10 @@
 | **Архитектура** | Clean Architecture + MVVM |
 | **DI** | Hilt |
 | **Карты** | Yandex MapKit |
-| **Сеть** |Retrofit, Kotlin Coroutines, Flow |
+| **Сеть** |Retrofit, WorkManager, Kotlin Coroutines,  Flow |
 | **Хранилище данных** | Room, DataStore, Firebase Firestore, Claudinary |
 | **Аутентификация** | Firebase Auth |
-| **Уведомления** | Firebase Cloud Messaging, WorkManager |
+| **Уведомления** | Firebase Cloud Messaging, Vercel|
 | **Загрузка изображений** | Coil |
 | **Навигация** | Jetpack Navigation Compose |
 
