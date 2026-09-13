@@ -76,6 +76,7 @@ class EditMarkerViewModel @Inject constructor(
                     name = name,
                     description = description,
                     image = localImagePath,
+                    createdAt = System.currentTimeMillis(),
                     uiTimestamp = System.currentTimeMillis()
                 )
                 val result = editMarkerUseCase(updatedMarker)
