@@ -38,6 +38,7 @@ class MarkerDetailsViewModel @Inject constructor(
     val isSubscribed = _isSubscribed.asStateFlow()
 
     private var observeSubscriptionJob: Job? = null
+
     //Defence from liking spam
     private var isLiking = false
     private var lastClickTime = 0L
@@ -55,13 +56,14 @@ class MarkerDetailsViewModel @Inject constructor(
                 _markerDetails.value = DetailsState.Success(marker)
                 observeSubscriptionJob?.cancel()
                 val authorId = marker?.authorId
-                if(authorId != null && authorId != currUserId){
+                if (authorId != null && authorId != currUserId) {
                     observeSubscriptionJob = viewModelScope.launch {
-                        observeSubscriptionUseCase(authorId).collect{subscribed ->
+                        observeSubscriptionUseCase(authorId).collect { subscribed ->
                             _isSubscribed.value = subscribed
                         }
                     }
                 }
+
             }
         }
     }
@@ -74,43 +76,41 @@ class MarkerDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 toggleLikedUseCase(markerId)
-            }
-            finally {
+            } finally {
                 isLiking = false
             }
         }
     }
 
-    fun onToggleSubscribe(){
+    fun onToggleSubscribe() {
         val currentTime = System.currentTimeMillis()
-        if(isSubscribing || currentTime - lastSubscribeClickTime < 500) return
+        if (isSubscribing || currentTime - lastSubscribeClickTime < 500) return
 
         val currentState = _markerDetails.value
-        if(currentState !is DetailsState.Success) return
+        if (currentState !is DetailsState.Success) return
 
         val authorId = currentState.marker?.authorId
         val authorName = currentState.marker?.authorName ?: "Автор"
 
-        if(authorId == null)  return
+        if (authorId == null) return
 
         isSubscribing = true
         lastSubscribeClickTime = currentTime
         viewModelScope.launch {
-            try{
+            try {
                 toggleSubscribeUseCase(
                     authorId = authorId,
                     authorName = authorName,
                     isSubscribed = _isSubscribed.value
                 )
-            }
-            finally {
+            } finally {
                 isSubscribing = false
             }
         }
 
     }
 
-    fun onDeleteMarker(){
+    fun onDeleteMarker() {
         viewModelScope.launch {
             deleteMarkerUseCase(markerId)
         }

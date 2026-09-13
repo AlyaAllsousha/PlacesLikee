@@ -3,9 +3,12 @@ package com.example.placeslikee.presentation.favourite
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.placeslikee.domain.models.UIMarker
+import com.example.placeslikee.domain.models.extensions.FilterSortState
+import com.example.placeslikee.domain.models.extensions.SortOption
 import com.example.placeslikee.domain.usecase.auth.IsUserLoggedInUseCase
 import com.example.placeslikee.domain.usecase.likes.GetLikedMarksUseCase
 import com.example.placeslikee.domain.usecase.likes.ToggleLikedUseCase
+import com.example.placeslikee.domain.usecase.markermap.ObserveFilteredMarkersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,7 +22,8 @@ import javax.inject.Inject
 class FavouriteViewModel @Inject constructor(
     private val getLikedMarksUseCase: GetLikedMarksUseCase,
     private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
-    private val toggleLikedUseCase: ToggleLikedUseCase
+    private val toggleLikedUseCase: ToggleLikedUseCase,
+    private val observeFilteredMarkersUseCase: ObserveFilteredMarkersUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<FavouriteState>(FavouriteState.Idle)
     val uiState = _uiState.asStateFlow()
@@ -34,54 +38,35 @@ class FavouriteViewModel @Inject constructor(
     private val _appliedQuery = MutableStateFlow("")
     val appliedQuery = _appliedQuery.asStateFlow()
 
+    private val _filterState = MutableStateFlow(FilterSortState())
 
-    val searchResults = combine(
-        getLikedMarksUseCase(),
-        _inputQuery
-    ) { markers, query ->
-        if (query.isBlank()) {
-            emptyList()
-        } else {
-            val lowerQuery = query.lowercase()
-            markers.filter {
-                it.name.lowercase().contains(lowerQuery) ||
-                        (it.authorName ?: "").lowercase().contains(lowerQuery)
-            }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val searchResults = observeFilteredMarkersUseCase(
+        sourceFlow = getLikedMarksUseCase(),
+        queryFlow = _inputQuery,
+        filterStateFlow = _filterState
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         loadLikedMarks()
     }
 
     private fun loadLikedMarks() {
-        if (isUserLoggedInUseCase()) {
-            viewModelScope.launch {
-                _uiState.value = FavouriteState.Loading
-                combine(
-                    getLikedMarksUseCase(),
-                    _appliedQuery
-                ) { marks, query ->
-                    val filtered = if (query.isBlank()) {
-                        marks
-                    } else {
-                        val lowerQuery = query.lowercase()
-                        marks.filter {
-                            it.name.lowercase().contains(lowerQuery) ||
-                                    (it.authorName ?: "").lowercase().contains(lowerQuery) ||
-                                    (lowerQuery.startsWith("#") && (it.description
-                                        ?: "").lowercase().contains(lowerQuery))
-
-                        }
-                    }
-                    filtered.sortedByDescending { it.uiTimestamp }
-                }.collect { filteredMarks ->
-                    _uiState.value = FavouriteState.Success(filteredMarks)
-                }
-            }
-        } else {
+        if (!isUserLoggedInUseCase()) {
             _uiState.value = FavouriteState.Unauthorized
+            return
         }
+        viewModelScope.launch {
+            _uiState.value = FavouriteState.Loading
+            observeFilteredMarkersUseCase(
+                sourceFlow = getLikedMarksUseCase(),
+                queryFlow = _appliedQuery,
+                filterStateFlow = _filterState
+            ).collect { filteredMarks ->
+                _uiState.value = FavouriteState.Success(filteredMarks)
+            }
+        }
+
     }
 
     fun updateInputQuery(query: String) {

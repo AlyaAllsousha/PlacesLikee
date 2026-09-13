@@ -47,6 +47,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.placeslikee.R
 import com.example.placeslikee.domain.models.NewMarkerIfo
+import com.example.placeslikee.domain.models.extensions.FilterSortState
 import com.example.placeslikee.presentation.common.CustomSnackbar
 import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
 import com.yandex.mapkit.Animation
@@ -77,6 +78,7 @@ fun MapScreen(
     onNavigateToAuth: () -> Unit,
     onNavigateToCreateMarker: (NewMarkerIfo) -> Unit,
     searchQuery: String = "",
+    filterSortState: FilterSortState,
     onMarkerClick: (String) -> Unit,
     selectedMarkerId: String?,
     onMapClick: () -> Unit
@@ -176,6 +178,9 @@ fun MapScreen(
 
     LaunchedEffect(searchQuery) {
         viewModel.setSearchQuery(searchQuery)
+    }
+    LaunchedEffect(filterSortState) {
+        viewModel.setFilterSortedState(filterSortState)
     }
     LaunchedEffect(Unit) {
         viewModel.navigateToAuth.collect {

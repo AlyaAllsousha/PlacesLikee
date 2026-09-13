@@ -279,7 +279,7 @@ private fun MarkerDetailsBody(
 
                 IconButton(
                     onClick = {
-                        val deepLink = "https://placesli.web.app/marker/${marker.id}"
+                        val deepLink = "https://placesli.web.app//marker/${marker.id}"
                         val textToShare = "Смотри какое крутое место «${marker.name}» в приложении PlacesLikee!\n\n$deepLink"
                         val sendIntent = Intent().apply {
                             action = Intent.ACTION_SEND
@@ -515,7 +515,7 @@ private fun DeletedMarkerState() {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Место загружается.",
+                text = "Место загружается или было удалено автором.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )

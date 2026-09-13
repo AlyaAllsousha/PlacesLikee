@@ -57,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.currentComposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,6 +84,8 @@ import androidx.room.util.TableInfo
 import androidx.room.util.query
 import com.example.placeslikee.R
 import com.example.placeslikee.domain.models.NewMarkerIfo
+import com.example.placeslikee.domain.models.extensions.FilterOption
+import com.example.placeslikee.domain.models.extensions.SortOption
 import com.example.placeslikee.presentation.common.DropdownSearchResults
 import com.example.placeslikee.presentation.common.SearchBar
 import com.example.placeslikee.presentation.list.ListScreen
@@ -106,6 +109,9 @@ fun MainScreen(
     val inputQuery by viewModel.inputQuery.collectAsState()
     val appliedQuery by viewModel.appliedQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+
+    val filterSortState by viewModel.filterSortState.collectAsState()
+    var showFilterSheet by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -181,6 +187,27 @@ fun MainScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 FilledIconButton(
+                    onClick = { showFilterSheet = true },
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = if (filterSortState.filterOption != FilterOption.ALL
+                            || filterSortState.sortOption != SortOption.DATE_DESC
+                        ) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (filterSortState.filterOption != FilterOption.ALL
+                            || filterSortState.sortOption != SortOption.DATE_DESC
+                        ) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_filter_alt_24),
+                        contentDescription = "Фильтры"
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                FilledIconButton(
                     onClick = {
                         viewModel.toggleIsMap()
                         focusManager.clearFocus()
@@ -221,6 +248,7 @@ fun MainScreen(
                             ) {
                                 MapScreen(
                                     searchQuery = appliedQuery,
+                                    filterSortState = filterSortState,
                                     onNavigateToAuth = { navigateSafely { onNavigateToAuth() } },
                                     onNavigateToCreateMarker = {
                                         navigateSafely {
@@ -249,6 +277,7 @@ fun MainScreen(
                         isMapVisible = false
                         ListScreen(
                             searchQuery = appliedQuery,
+                            filterSortState = filterSortState,
                             onMarkerClick = onMarkerClick,
                             isRefreshing = isRefreshing,
                             onRefresh = viewModel::refresh
@@ -269,6 +298,13 @@ fun MainScreen(
         }
     }
 
+    if(showFilterSheet){
+        FilterSortBottomSheet(
+            currentState = filterSortState,
+            onStateChanged = {viewModel.updateFilterSortState(it)},
+            onDismiss = {showFilterSheet = false}
+        )
+    }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {

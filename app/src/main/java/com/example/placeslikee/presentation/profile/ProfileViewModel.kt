@@ -4,10 +4,12 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.placeslikee.domain.models.UIMarker
+import com.example.placeslikee.domain.models.extensions.FilterSortState
 import com.example.placeslikee.domain.usecase.profile.GetUsersMarkerUseCase
 import com.example.placeslikee.domain.usecase.auth.IsUserLoggedInUseCase
 import com.example.placeslikee.domain.usecase.auth.getCurrentUserUseCase
 import com.example.placeslikee.domain.usecase.likes.ToggleLikedUseCase
+import com.example.placeslikee.domain.usecase.markermap.ObserveFilteredMarkersUseCase
 import com.example.placeslikee.domain.usecase.profile.ChangeUserEmailUseCase
 import com.example.placeslikee.domain.usecase.profile.DeleteMarkerUseCase
 import com.example.placeslikee.domain.usecase.profile.SyncAuthDataUseCase
@@ -34,7 +36,8 @@ class ProfileViewModel @Inject constructor(
     private val deleteMarkerUseCase: DeleteMarkerUseCase,
     private val changeUserEmailUseCase: ChangeUserEmailUseCase,
     private val syncAuthDataUseCase: SyncAuthDataUseCase,
-    private val toggleLikedUseCase: ToggleLikedUseCase
+    private val toggleLikedUseCase: ToggleLikedUseCase,
+    private val observeFilteredMarkersUseCase: ObserveFilteredMarkersUseCase
 ) : ViewModel() {
     private val _state = MutableStateFlow<ProfileState>(ProfileState.Idle)
     val state = _state.asStateFlow()
@@ -45,10 +48,10 @@ class ProfileViewModel @Inject constructor(
     private val _isEmailChanging = MutableStateFlow(false)
     val isEmailChanging = _isEmailChanging.asStateFlow()
 
+
     //Defence from liking spam
     private var isLiking = false
     private var lastClickTime = 0L
-
 
 
     //Search query
@@ -58,23 +61,13 @@ class ProfileViewModel @Inject constructor(
     private val _appliedQuery = MutableStateFlow("")
     val appliedQuery = _appliedQuery.asStateFlow()
 
+    private val _filterState = MutableStateFlow(FilterSortState())
 
-    val searchResults = combine(
-        getUsersMarkerUseCase(),
-        _inputQuery
-    ) { markers, query ->
-        if (query.isBlank()) {
-            emptyList()
-        } else {
-            val lowerQuery = query.lowercase()
-            markers.filter {
-                it.name.lowercase().contains(lowerQuery) ||
-                        (it.authorName ?: "").lowercase().contains(lowerQuery) ||
-                        (lowerQuery.startsWith("#") && (it.description ?: "").lowercase().contains(lowerQuery))
-            }
-        }
-
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val searchResults = observeFilteredMarkersUseCase(
+        sourceFlow = getUsersMarkerUseCase(),
+        queryFlow = _inputQuery,
+        filterStateFlow = _filterState
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         loadMarkers()
@@ -84,45 +77,36 @@ class ProfileViewModel @Inject constructor(
     }
 
     private fun loadMarkers() {
-        if (isUserLoggedInUseCase()) {
-            viewModelScope.launch {
-                _state.value = ProfileState.Loading
-                combine(
-                    getCurrentUserUseCase(),
-                    getUsersMarkerUseCase(),
-                    _appliedQuery
-                ) { user, markers, query ->
-                    if (user == null) {
-                        ProfileState.Loading
-                    } else {
-                        if (query.isBlank()) {
-                            ProfileState.Success(
-                                markersList = markers,
-                                user = user
-                            )
-                        } else {
-                            val lowerQuery = query.lowercase()
-                            val markersList = markers.filter{
-                                it.name.lowercase().contains(lowerQuery) ||
-                                        (it.authorName ?: "").lowercase().contains(lowerQuery) ||
-                                        (lowerQuery.startsWith("#") && (it.description ?: "").lowercase().contains(lowerQuery))
-
-                            }
-                            ProfileState.Success(
-                                markersList = markersList,
-                                user = user
-                            )
-                        }
-                    }
-                }.collect { combinedState ->
-                    _state.value = combinedState
-
-                }
-
-            }
-        } else {
+        if (!isUserLoggedInUseCase()) {
             _state.value = ProfileState.Unauthorized
+
+            return
         }
+        viewModelScope.launch {
+            _state.value = ProfileState.Loading
+            val filteredMarkersFlow = observeFilteredMarkersUseCase(
+                sourceFlow = getUsersMarkerUseCase(),
+                queryFlow = _appliedQuery,
+                filterStateFlow = _filterState
+            )
+            combine(
+                getCurrentUserUseCase(),
+                filteredMarkersFlow
+            ) { user, markers ->
+                if (user == null) {
+                    ProfileState.Loading
+                } else {
+                    ProfileState.Success(
+                        markersList = markers,
+                        user = user
+                    )
+                }
+            }.collect { combinedState ->
+                _state.value = combinedState
+            }
+
+        }
+
     }
 
     fun onChangeUserInfo(name: String) {
@@ -146,9 +130,7 @@ class ProfileViewModel @Inject constructor(
     }
 
 
-
-
-    fun onToggleLike(markerId: String){
+    fun onToggleLike(markerId: String) {
         val currentTime = System.currentTimeMillis()
         if (isLiking || currentTime - lastClickTime < 500) return
         isLiking = true
@@ -156,24 +138,24 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 toggleLikedUseCase(markerId)
-            }
-            finally {
+            } finally {
                 isLiking = false
             }
         }
     }
-    fun updateInputQuery(query: String){
+
+    fun updateInputQuery(query: String) {
         _inputQuery.value = query
-        if(query.isEmpty()){
+        if (query.isEmpty()) {
             _appliedQuery.value = ""
         }
     }
 
-    fun applySearch(){
+    fun applySearch() {
         _appliedQuery.value = _inputQuery.value
     }
 
-    fun selectPlace(title: String){
+    fun selectPlace(title: String) {
         _appliedQuery.value = title
         _inputQuery.value = title
     }

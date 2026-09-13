@@ -2,65 +2,51 @@ package com.example.placeslikee.presentation.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.usecase.likes.ToggleLikedUseCase
 import com.example.placeslikee.domain.usecase.markermap.GetMapMarkUseCase
+import com.example.placeslikee.domain.usecase.markermap.ObserveFilteredMarkersUseCase
+import com.example.placeslikee.domain.models.extensions.FilterSortState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ListViewModel @Inject constructor(
     private val getMapMarkUseCase: GetMapMarkUseCase,
-    private val toggleLikedUseCase: ToggleLikedUseCase
+    private val toggleLikedUseCase: ToggleLikedUseCase,
+    private val observeFilteredMarkersUseCase: ObserveFilteredMarkersUseCase
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow<ListState>(ListState.Loading)
-    val uiState = _uiState.asStateFlow()
-
     private val _searchQuery = MutableStateFlow("")
+    private val _filterSortState = MutableStateFlow(FilterSortState())
+
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
 
-
-    init {
-        loadPoints()
+    fun setFilterSortState(state: FilterSortState) {
+        _filterSortState.value = state
     }
 
-    private fun loadPoints() {
-        viewModelScope.launch {
-            combine(
-                getMapMarkUseCase(),
-                _searchQuery
-            ) { points, query ->
-                val filtered = if (query.isBlank()) {
-                    points
-                } else {
-                    val lowerCaseQuery = query.lowercase()
-                    points.filter { marker ->
-                        marker.name.lowercase().contains(lowerCaseQuery) ||
-                                (marker.authorName ?: "").lowercase().contains(lowerCaseQuery) ||
-                                (lowerCaseQuery.startsWith("#") && (marker.description ?: "").lowercase().contains(lowerCaseQuery))
-                    }
-
-                }
-                val sortedAndFiltered = filtered.sortedByDescending { it.createdAt}
-
-                Pair(sortedAndFiltered, query)
-            }.collect { (filteredPoint, query) ->
-                if (filteredPoint.isEmpty() && query.isNotBlank()) {
-                    _uiState.value = ListState.Error("Ничего не найдено")
-                } else{
-                _uiState.value = ListState.Success(filteredPoint)
-                }
-            }
+    val uiState: StateFlow<ListState> = observeFilteredMarkersUseCase(
+        sourceFlow = getMapMarkUseCase(),
+        queryFlow = _searchQuery,
+        filterStateFlow = _filterSortState
+    ).map { filteredList ->
+        if (filteredList.isEmpty() && _searchQuery.value.isNotBlank()) {
+            ListState.Error("Ничего не найдено")
+        } else {
+            ListState.Success(filteredList)
         }
-    }
-
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ListState.Loading
+    )
 
 
     fun onToggleLike(markerId: String) {

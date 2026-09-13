@@ -1,26 +1,21 @@
 package com.example.placeslikee.presentation.map
 
-import android.util.Log
-import androidx.compose.ui.text.toLowerCase
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.util.query
 import com.example.placeslikee.domain.models.NewMarkerIfo
 import com.example.placeslikee.domain.models.UIMarker
 import com.example.placeslikee.domain.usecase.auth.GetCurrentIdUseCase
 import com.example.placeslikee.domain.usecase.markermap.GetMapMarkUseCase
-import com.example.placeslikee.domain.usecase.markermap.RefreshMarkersUseCase
 import com.example.placeslikee.domain.usecase.auth.IsUserLoggedInUseCase
+import com.example.placeslikee.domain.usecase.markermap.ObserveFilteredMarkersUseCase
+import com.example.placeslikee.domain.models.extensions.FilterSortState
 import com.yandex.mapkit.map.CameraPosition
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,18 +25,24 @@ class MapViewModel @Inject constructor(
     private val getMapMarkerUseCase: GetMapMarkUseCase,
     private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
     private val getCurrentIdUseCase: GetCurrentIdUseCase,
+    private val observeFilteredMarkersUseCase: ObserveFilteredMarkersUseCase
 
-    ) : ViewModel() {
+) : ViewModel() {
     private val _mapState = MutableStateFlow(MapState())
     val mapState = _mapState.asStateFlow()
-
-    private val _searchQuery = MutableStateFlow("")
 
     private val _snackbarMessage = Channel<String>(Channel.CONFLATED)
     val snackbarMessage = _snackbarMessage.receiveAsFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    private val _filterSortState = MutableStateFlow(FilterSortState())
+
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun setFilterSortedState(state: FilterSortState) {
+        _filterSortState.value = state
     }
 
     //Auxiliary data for camera position change
@@ -77,47 +78,23 @@ class MapViewModel @Inject constructor(
     }
 
     init {
-        loadPoints()
-    }
-
-    private fun loadPoints() {
         viewModelScope.launch {
-            _mapState.value = _mapState.value.copy(isLoading = true)
-            combine(
-                getMapMarkerUseCase(),
-                _searchQuery
-            ) { points, query ->
-                val filtered = if (query.isBlank()) {
-                    points
-                } else {
-                    val lowerCaseQuery = query.lowercase()
-                    points.filter { marker ->
-                        marker.name.lowercase().contains(lowerCaseQuery) ||
-                                (marker.authorName ?: "").lowercase().contains(lowerCaseQuery) ||
-                                (lowerCaseQuery.startsWith("#") && (marker.description ?: "").lowercase().contains(lowerCaseQuery))
+            observeFilteredMarkersUseCase(getMapMarkerUseCase(), _searchQuery, _filterSortState)
+                .collect{filteredPoints ->
+                    if(filteredPoints.isNotEmpty()  && _searchQuery.value.isNotBlank()){
+                        _cameraCommands.trySend(CameraCommand.FitBounds(filteredPoints))
+                    } else if(filteredPoints.isEmpty() && _searchQuery.value.isNotBlank()){
+                        _snackbarMessage.trySend("Ничего не найдено")
                     }
-
-                }
-                Pair(filtered, query)
-            }
-                .distinctUntilChanged()
-                .collect { (filteredPoint, query) ->
                     _mapState.value = _mapState.value.copy(
-                        points = filteredPoint,
+                        points = filteredPoints,
                         isLoading = false
                     )
-                if (filteredPoint.isEmpty() && query.isNotBlank()) {
-                    _snackbarMessage.trySend("Ничего не найдено")
-                } else {
-                    _mapState.value =
-                        _mapState.value.copy(points = filteredPoint, isLoading = false)
-                    if (query.isNotBlank() && filteredPoint.isNotEmpty()) {
-                        _cameraCommands.trySend(CameraCommand.FitBounds(filteredPoint))
-                    }
                 }
-            }
         }
     }
+
+
 
 
     fun onMapClick(event: MapEvent) {
@@ -142,9 +119,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun dismissMarkerDetails() {
-        _selectedMarker.value = null
-    }
 
     private fun handleLongClick(lat: Double, lon: Double) {
         viewModelScope.launch {

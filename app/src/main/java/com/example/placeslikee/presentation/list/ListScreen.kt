@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.placeslikee.domain.models.extensions.FilterSortState
 import com.example.placeslikee.presentation.common.LoadingBox
 import com.example.placeslikee.presentation.common.MarkerItem
 import com.example.placeslikee.presentation.markerdetails.MarkerDetailsContent
@@ -33,6 +34,7 @@ fun ListScreen(
     viewModel: ListViewModel = hiltViewModel(),
     onMarkerClick: (String) -> Unit,
     searchQuery: String = "",
+    filterSortState: FilterSortState,
     isRefreshing: Boolean,
     onRefresh: () -> Unit
 ) {
@@ -45,7 +47,9 @@ fun ListScreen(
         viewModel.setSearchQuery(searchQuery)
     }
 
-
+    LaunchedEffect(filterSortState) {
+        viewModel.setFilterSortState(filterSortState)
+    }
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
